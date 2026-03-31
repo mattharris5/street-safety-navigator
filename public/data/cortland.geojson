@@ -1,0 +1,207 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Cortland Avenue Centerline",
+        "street": "Cortland Ave",
+        "neighborhood": "Bernal Heights",
+        "city": "San Francisco",
+        "bearing": 105
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-122.40603, 37.73869],
+          [-122.40563, 37.73876],
+          [-122.40519, 37.73884],
+          [-122.40480, 37.73891],
+          [-122.40449, 37.73897],
+          [-122.40412, 37.73905],
+          [-122.40371, 37.73913],
+          [-122.40332, 37.73921],
+          [-122.40294, 37.73929],
+          [-122.40254, 37.73937],
+          [-122.40216, 37.73944],
+          [-122.40175, 37.73952],
+          [-122.40134, 37.73959],
+          [-122.40093, 37.73966],
+          [-122.40052, 37.73973],
+          [-122.40012, 37.73980],
+          [-122.39969, 37.73987],
+          [-122.39929, 37.73993],
+          [-122.39888, 37.73999],
+          [-122.39848, 37.74005],
+          [-122.39806, 37.74011],
+          [-122.39762, 37.74016],
+          [-122.39718, 37.74021],
+          [-122.39676, 37.74026],
+          [-122.39634, 37.74030],
+          [-122.39590, 37.74034],
+          [-122.39548, 37.74038],
+          [-122.39505, 37.74042],
+          [-122.39459, 37.74046],
+          [-122.39414, 37.74050],
+          [-122.39370, 37.74054]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "intersection",
+        "name": "Bayshore Blvd",
+        "shortName": "Bayshore",
+        "order": 0
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.40603, 37.73869]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "intersection",
+        "name": "Industrial St",
+        "shortName": "Industrial",
+        "order": 1
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.40519, 37.73884]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "intersection",
+        "name": "Wool St",
+        "shortName": "Wool",
+        "order": 2
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.40449, 37.73897]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "intersection",
+        "name": "Andover St",
+        "shortName": "Andover",
+        "order": 3
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.40371, 37.73913]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "intersection",
+        "name": "Bocana St",
+        "shortName": "Bocana",
+        "order": 4
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.40254, 37.73937]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "intersection",
+        "name": "Ellsworth St",
+        "shortName": "Ellsworth",
+        "order": 5
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.40134, 37.73959]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "intersection",
+        "name": "Folsom St",
+        "shortName": "Folsom",
+        "order": 6
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.40012, 37.73980]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "intersection",
+        "name": "Gates St",
+        "shortName": "Gates",
+        "order": 7
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.39888, 37.73999]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "intersection",
+        "name": "Coso Ave",
+        "shortName": "Coso",
+        "order": 8
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.39762, 37.74016]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "intersection",
+        "name": "Prospect Ave",
+        "shortName": "Prospect",
+        "order": 9
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.39634, 37.74030]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "intersection",
+        "name": "Bonview St",
+        "shortName": "Bonview",
+        "order": 10
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.39505, 37.74042]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "type": "intersection",
+        "name": "Mission St",
+        "shortName": "Mission",
+        "order": 11
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-122.39370, 37.74054]
+      }
+    }
+  ]
+}

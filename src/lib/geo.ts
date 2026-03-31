@@ -3,6 +3,37 @@ import length from '@turf/length';
 import nearestPointOnLine from '@turf/nearest-point-on-line';
 import { lineString, point } from '@turf/helpers';
 import type { Feature, LineString, Position } from 'geojson';
+import type { StreetSide } from './types';
+
+/**
+ * Offset a [lng, lat] point perpendicular to the street by a given number of meters.
+ * streetBearingDeg: the bearing of the street from west to east (degrees clockwise from north).
+ * side: 'north' offsets toward the north side of the street, 'south' toward south.
+ * Returns adjusted [lng, lat].
+ */
+export function offsetForSide(
+  lng: number,
+  lat: number,
+  side: StreetSide,
+  streetBearingDeg: number,
+  offsetMeters: number
+): [number, number] {
+  if (side === 'center' || side === 'both') return [lng, lat];
+
+  // Perpendicular bearing: north side = streetBearing - 90, south side = streetBearing + 90
+  const perpBearingDeg =
+    side === 'north' ? streetBearingDeg - 90 : streetBearingDeg + 90;
+  const perpRad = (perpBearingDeg * Math.PI) / 180;
+
+  // 1° lat ≈ 111,000m; 1° lng ≈ 111,000m * cos(lat)
+  const metersPerLat = 111000;
+  const metersPerLng = 111000 * Math.cos((lat * Math.PI) / 180);
+
+  const dLat = (offsetMeters * Math.cos(perpRad)) / metersPerLat;
+  const dLng = (offsetMeters * Math.sin(perpRad)) / metersPerLng;
+
+  return [lng + dLng, lat + dLat];
+}
 
 /**
  * Given a GeoJSON LineString and a progress value (0–1),

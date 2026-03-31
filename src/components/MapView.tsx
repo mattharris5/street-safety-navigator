@@ -6,6 +6,8 @@ import {
   CORTLAND_BEARING,
   CORTLAND_CENTER,
   DEFAULT_ZOOM,
+  MIN_ZOOM,
+  MAX_ZOOM,
   MAPBOX_STYLE_MAP,
   MAPBOX_STYLE_SATELLITE,
 } from '@/lib/constants';
@@ -29,6 +31,8 @@ export default function MapView({
 }: MapViewProps) {
   const mapRef = useRef<MapRef>(null);
   const prevProgressRef = useRef(progress);
+  // Track user-adjusted zoom separately so pinch-to-zoom is preserved
+  const userZoomRef = useRef(DEFAULT_ZOOM);
 
   const updateCamera = useCallback(
     (prog: number) => {
@@ -38,8 +42,8 @@ export default function MapView({
         center: [lng, lat],
         bearing: CORTLAND_BEARING,
         pitch: 0,
-        zoom: DEFAULT_ZOOM,
-        duration: 100,
+        zoom: userZoomRef.current,
+        duration: 120,
         easing: (t) => t,
       });
     },
@@ -90,8 +94,12 @@ export default function MapView({
       dragPan={false}
       dragRotate={false}
       keyboard={false}
-      touchZoomRotate={false}
+      // Allow pinch-to-zoom on mobile; capture zoom changes to preserve level
+      touchZoomRotate={{ around: 'center' }}
       doubleClickZoom={false}
+      minZoom={MIN_ZOOM}
+      maxZoom={MAX_ZOOM}
+      onZoom={(e) => { userZoomRef.current = e.viewState.zoom; }}
     >
       {children}
     </Map>

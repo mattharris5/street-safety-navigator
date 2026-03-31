@@ -1,7 +1,8 @@
 'use client';
 
 import { Marker } from 'react-map-gl/mapbox';
-import { STATUS_COLORS, TYPE_ICONS } from '@/lib/constants';
+import { STATUS_COLORS, TYPE_ICONS, STREET_BEARING_DEG, OFFSET_METERS } from '@/lib/constants';
+import { offsetForSide } from '@/lib/geo';
 import type { Project } from '@/lib/types';
 
 interface ProjectMarkerProps {
@@ -14,46 +15,63 @@ export default function ProjectMarker({ project, selected, onClick }: ProjectMar
   const color = STATUS_COLORS[project.status];
   const icon = TYPE_ICONS[project.type];
 
+  // Offset marker to correct side of street
+  const [markerLng, markerLat] = offsetForSide(
+    project.lng,
+    project.lat,
+    project.side,
+    STREET_BEARING_DEG,
+    OFFSET_METERS
+  );
+
   return (
     <Marker
-      longitude={project.lng}
-      latitude={project.lat}
-      anchor="bottom"
+      longitude={markerLng}
+      latitude={markerLat}
+      anchor="center"
       onClick={(e) => {
         e.originalEvent.stopPropagation();
         onClick(project);
       }}
     >
       <div
-        className="relative cursor-pointer transition-transform hover:scale-110 active:scale-95"
-        style={{ transform: selected ? 'scale(1.2)' : undefined }}
+        className="relative cursor-pointer group"
+        style={{ transform: selected ? 'scale(1.25)' : undefined, transition: 'transform 0.15s ease' }}
       >
-        {/* Pin body */}
+        {/* Flat circular marker — sits on the map surface like a painted mark */}
         <div
-          className="w-9 h-9 rounded-full flex items-center justify-center shadow-lg border-2 border-white text-base"
-          style={{ backgroundColor: color }}
+          className="flex items-center justify-center rounded-full border-2 border-white shadow-md text-sm"
+          style={{
+            width: selected ? 38 : 32,
+            height: selected ? 38 : 32,
+            backgroundColor: color,
+            boxShadow: selected
+              ? `0 0 0 3px ${color}55, 0 2px 8px rgba(0,0,0,0.35)`
+              : '0 1px 4px rgba(0,0,0,0.3)',
+            transition: 'width 0.15s ease, height 0.15s ease, box-shadow 0.15s ease',
+          }}
           title={project.name}
         >
-          {icon}
+          <span style={{ fontSize: selected ? 16 : 13 }}>{icon}</span>
         </div>
 
-        {/* Pin tail */}
-        <div
-          className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-0 h-0"
-          style={{
-            borderLeft: '5px solid transparent',
-            borderRight: '5px solid transparent',
-            borderTop: `8px solid ${color}`,
-          }}
-        />
-
-        {/* Selected ring */}
+        {/* Pulse ring when selected */}
         {selected && (
           <div
-            className="absolute inset-0 rounded-full border-4 pointer-events-none animate-pulse"
-            style={{ borderColor: color, margin: '-4px' }}
+            className="absolute inset-0 rounded-full pointer-events-none animate-ping"
+            style={{ backgroundColor: color, opacity: 0.25 }}
           />
         )}
+
+        {/* Hover label */}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 whitespace-nowrap
+                     bg-slate-900/90 text-white text-[10px] font-medium px-2 py-0.5 rounded
+                     opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none
+                     shadow-lg max-w-[160px] truncate"
+        >
+          {project.name}
+        </div>
       </div>
     </Marker>
   );

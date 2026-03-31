@@ -14,13 +14,20 @@ export const CORTLAND_CENTER = {
   lat: (CORTLAND_WEST.lat + CORTLAND_EAST.lat) / 2,
 };
 
-export const DEFAULT_ZOOM = 17;
-export const MIN_ZOOM = 15;
-export const MAX_ZOOM = 19;
+export const DEFAULT_ZOOM = 18.5;
+export const MIN_ZOOM = 16;
+export const MAX_ZOOM = 20;
 
-// Mapbox styles
-export const MAPBOX_STYLE_MAP = 'mapbox://styles/mapbox/light-v11';
+// Mapbox styles — streets-v12 shows lane markings, crosswalks, stop bars at high zoom
+export const MAPBOX_STYLE_MAP = 'mapbox://styles/mapbox/streets-v12';
 export const MAPBOX_STYLE_SATELLITE = 'mapbox://styles/mapbox/satellite-streets-v12';
+
+// Perpendicular offset from Cortland centerline for side-of-street placement
+// Cortland bearing ~95° → perpendicular toward north is ~5° from north
+// At lat 37.74: 1° lat ≈ 111,000m, 1° lng ≈ 88,000m
+// OFFSET_METERS: ~10m puts markers at the edge of the travel lane / start of parking lane
+export const STREET_BEARING_DEG = 95; // actual bearing of Cortland (not map rotation)
+export const OFFSET_METERS = 10;
 
 // Project status colors
 export const STATUS_COLORS: Record<ProjectStatus, string> = {

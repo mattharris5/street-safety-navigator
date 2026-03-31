@@ -1,11 +1,12 @@
 import type { ProjectStatus, ProjectType } from './types';
 
-// Cortland Ave runs roughly west-to-east at bearing ~105 degrees
-export const CORTLAND_BEARING = 105;
+// Cortland Ave runs roughly west-to-east at bearing ~5 degrees
+// (nearly east-west but tilted slightly south-of-east)
+export const CORTLAND_BEARING = 5;
 
-// Bounds of Cortland Ave (west end to east end)
-export const CORTLAND_WEST = { lng: -122.40603, lat: 37.73869 };
-export const CORTLAND_EAST = { lng: -122.39370, lat: 37.74054 };
+// Bounds of Cortland Ave — Mission St (west) to Bayshore Blvd (east)
+export const CORTLAND_WEST = { lng: -122.422848, lat: 37.741030 };
+export const CORTLAND_EAST = { lng: -122.406920, lat: 37.739570 };
 
 // Center of Cortland Ave
 export const CORTLAND_CENTER = {

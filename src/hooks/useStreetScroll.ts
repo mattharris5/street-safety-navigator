@@ -57,7 +57,7 @@ export function useStreetScroll({
       if (touchStartXRef.current === null) return;
       const dx = touchStartXRef.current - e.touches[0].clientX;
       touchStartXRef.current = e.touches[0].clientX;
-      updateProgress(dx * sensitivity * 2);
+      updateProgress(dx * sensitivity * 0.5);
     };
 
     const handleTouchEnd = () => {

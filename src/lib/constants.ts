@@ -16,7 +16,7 @@ export const CORTLAND_CENTER = {
 
 export const DEFAULT_ZOOM = 18.5;
 export const MIN_ZOOM = 16;
-export const MAX_ZOOM = 20;
+export const MAX_ZOOM = 22;
 
 // Mapbox styles — streets-v12 shows lane markings, crosswalks, stop bars at high zoom
 export const MAPBOX_STYLE_MAP = 'mapbox://styles/mapbox/streets-v12';

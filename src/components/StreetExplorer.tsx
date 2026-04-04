@@ -1,26 +1,28 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { extractLineString, extractIntersections, progressAlongLine } from '@/lib/geo';
-import { useStreetScroll } from '@/hooks/useStreetScroll';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { extractLineString, extractIntersections } from '@/lib/geo';
+import { useIntersectionNav } from '@/hooks/useIntersectionNav';
 import { useProjects } from '@/hooks/useProjects';
 import { useIncidents } from '@/hooks/useIncidents';
 import MapView from './MapView';
-import ProjectMarker from './ProjectMarker';
-import IncidentDot from './IncidentDot';
 import IntersectionMarker from './IntersectionMarker';
+import IntersectionView from './intersection/IntersectionView';
 import DetailPanel from './DetailPanel';
 import Header from './Header';
 import ViewToggle from './ViewToggle';
-import MiniMap from './MiniMap';
+import CortlandStrip from './CortlandStrip';
 import FilterBar from './FilterBar';
-import type { Project, Incident, ViewMode, FilterState, Intersection } from '@/lib/types';
+import type { Project, Incident, ViewMode, FilterState } from '@/lib/types';
 
 interface StreetExplorerProps {
   cortlandGeoJSON: GeoJSON.FeatureCollection;
+  initialIntersection?: string;
 }
 
-export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps) {
+export default function StreetExplorer({ cortlandGeoJSON, initialIntersection }: StreetExplorerProps) {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>('map');
   const [selectedItem, setSelectedItem] = useState<
     { type: 'project'; data: Project } | { type: 'incident'; data: Incident } | null
@@ -34,16 +36,38 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
   const cortlandLine = useMemo(() => extractLineString(cortlandGeoJSON), [cortlandGeoJSON]);
   const intersections = useMemo(() => extractIntersections(cortlandGeoJSON), [cortlandGeoJSON]);
 
-  // Pre-compute each intersection's progress value (0–1) along the line
-  const intersectionProgress = useMemo(() => {
-    if (!cortlandLine) return [];
-    return intersections.map((int) => ({
-      ...int,
-      progress: progressAlongLine(cortlandLine, int.lng, int.lat),
-    }));
-  }, [cortlandLine, intersections]);
+  // Resolve initial intersection from URL param
+  const initialIndex = useMemo(() => {
+    if (!initialIntersection) return 0;
+    const slug = initialIntersection.toLowerCase();
+    const idx = intersections.findIndex(
+      (int) =>
+        int.shortName?.toLowerCase() === slug ||
+        int.name.toLowerCase().includes(slug)
+    );
+    return idx >= 0 ? idx : 0;
+  }, [initialIntersection, intersections]);
 
-  const { progress, setProgress } = useStreetScroll({ initialProgress: 0.5 });
+  const { currentIndex, currentIntersection, goTo, next, prev } = useIntersectionNav({
+    intersections,
+    initialIndex,
+  });
+
+  // Update URL on navigation (shallow)
+  const updateUrl = useCallback(
+    (index: number) => {
+      const int = intersections[index];
+      if (!int) return;
+      const slug = (int.shortName ?? int.name).toLowerCase().replace(/\s+/g, '-');
+      router.replace(`/?intersection=${slug}`, { scroll: false });
+    },
+    [intersections, router]
+  );
+
+  useEffect(() => {
+    updateUrl(currentIndex);
+  }, [currentIndex, updateUrl]);
+
   const { projects } = useProjects();
   const { incidents } = useIncidents();
 
@@ -56,120 +80,57 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
     [projects, filters]
   );
 
-  // Derive current block label from progress
-  const currentBlock = useMemo(() => {
-    if (!intersectionProgress.length) return null;
-    const sorted = [...intersectionProgress].sort((a, b) => a.progress - b.progress);
-
-    // Find the nearest intersection
-    const nearest = sorted.reduce((best, int) =>
-      Math.abs(int.progress - progress) < Math.abs(best.progress - progress) ? int : best
-    );
-
-    // If very close to an intersection, show "@ Name"
-    if (Math.abs(nearest.progress - progress) < 0.04) {
-      return `@ ${nearest.name}`;
-    }
-
-    // Otherwise show "Between A & B"
-    const before = [...sorted].reverse().find((i) => i.progress <= progress);
-    const after = sorted.find((i) => i.progress > progress);
-    if (before && after) return `${before.shortName} → ${after.shortName}`;
-    if (before) return `East of ${before.shortName}`;
-    if (after) return `West of ${after.shortName}`;
-    return null;
-  }, [progress, intersectionProgress]);
-
   return (
     <div
       id="street-explorer"
-      className="relative w-full h-screen overflow-hidden bg-slate-100 select-none"
-      style={{ cursor: 'grab', touchAction: 'none' }}
+      className="relative w-full h-screen overflow-hidden select-none"
+      style={{ background: 'var(--color-cream)', cursor: 'grab', touchAction: 'none' }}
     >
-      {/* Map fills the full viewport */}
-      <MapView progress={progress} viewMode={viewMode} cortlandLine={cortlandLine}>
-        {/* Intersection labels */}
-        {intersections.map((int) => (
-          <IntersectionMarker key={int.name} intersection={int} />
-        ))}
-
-        {/* Project markers */}
-        {filteredProjects.map((project) => (
-          <ProjectMarker
-            key={project.id}
-            project={project}
-            selected={selectedItem?.type === 'project' && selectedItem.data.id === project.id}
-            onClick={(p) => setSelectedItem({ type: 'project', data: p })}
-          />
-        ))}
-
-        {/* Incident dots */}
-        {filters.showIncidents &&
-          incidents.map((incident) => (
-            <IncidentDot
-              key={incident.id}
-              incident={incident}
-              onClick={(i) => setSelectedItem({ type: 'incident', data: i })}
-            />
+      {/* Mapbox base — dimmed under SVG overlay */}
+      <div
+        className="absolute inset-0"
+        style={{ filter: 'saturate(0.3) brightness(0.85)', opacity: 0.7 }}
+      >
+        <MapView intersection={currentIntersection} viewMode={viewMode} cortlandLine={cortlandLine}>
+          {intersections.map((int) => (
+            <IntersectionMarker key={int.name} intersection={int} />
           ))}
-      </MapView>
+        </MapView>
+      </div>
 
-      {/* Header bar */}
+      {/* SVG intersection overlay */}
+      {currentIntersection && (
+        <IntersectionView
+          intersection={currentIntersection}
+          intersectionIndex={currentIndex}
+          projects={filteredProjects}
+          selectedProjectId={selectedItem?.type === 'project' ? selectedItem.data.id : null}
+          onSelectProject={(p) => setSelectedItem({ type: 'project', data: p })}
+        />
+      )}
+
+      {/* Header */}
       <Header projectCount={projects.length} />
 
+      {/* Cortland strip navigator */}
+      <CortlandStrip
+        intersections={intersections}
+        currentIndex={currentIndex}
+        onNavigate={goTo}
+        onPrev={prev}
+        onNext={next}
+      />
+
       {/* Controls toolbar */}
-      <div className="absolute top-16 left-4 right-4 z-10 flex items-center justify-between gap-3 flex-wrap">
+      <div className="absolute top-[132px] left-4 right-4 z-10 flex items-center justify-end gap-3 flex-wrap">
         <FilterBar filters={filters} onChange={setFilters} />
         <div className="flex items-center gap-2 ml-auto">
-          <MiniMap progress={progress} intersections={intersections} />
           <ViewToggle mode={viewMode} onChange={setViewMode} />
         </div>
       </div>
 
-      {/* Current block indicator */}
-      {currentBlock && (
-        <div className="absolute top-28 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-          <div className="bg-slate-900/75 text-white text-[11px] font-medium px-3 py-1 rounded-full
-                          backdrop-blur-sm whitespace-nowrap shadow-sm tracking-wide">
-            {currentBlock}
-          </div>
-        </div>
-      )}
-
-      {/* Scroll hint */}
-      <ScrollHint />
-
       {/* Detail panel */}
       <DetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />
-    </div>
-  );
-}
-
-function ScrollHint() {
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setVisible(false), 4000);
-    const hide = () => setVisible(false);
-    window.addEventListener('wheel', hide, { once: true });
-    window.addEventListener('touchstart', hide, { once: true });
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('wheel', hide);
-      window.removeEventListener('touchstart', hide);
-    };
-  }, []);
-
-  if (!visible) return null;
-
-  return (
-    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-      <div className="bg-black/60 text-white text-xs px-4 py-2 rounded-full backdrop-blur-sm flex items-center gap-2">
-        <span className="animate-bounce inline-block">←</span>
-        <span className="hidden sm:inline">Scroll to travel along Cortland Ave</span>
-        <span className="sm:hidden">Swipe to explore</span>
-        <span className="animate-bounce inline-block">→</span>
-      </div>
     </div>
   );
 }

@@ -39,7 +39,7 @@ export default function Header({ projectCount }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-1 text-xs text-slate-400">
-        <span className="hidden sm:inline">← Scroll to explore →</span>
+        <span className="hidden sm:inline">← → to navigate</span>
         <span className="sm:hidden">Swipe to explore</span>
       </div>
     </header>

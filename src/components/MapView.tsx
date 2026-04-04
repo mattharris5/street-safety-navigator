@@ -5,57 +5,54 @@ import Map, { type MapRef } from 'react-map-gl/mapbox';
 import {
   CORTLAND_BEARING,
   CORTLAND_CENTER,
-  DEFAULT_ZOOM,
   MIN_ZOOM,
   MAX_ZOOM,
   MAPBOX_STYLE_MAP,
   MAPBOX_STYLE_SATELLITE,
 } from '@/lib/constants';
-import { interpolateAlongLine } from '@/lib/geo';
 import type { Feature, LineString } from 'geojson';
-import type { ViewMode } from '@/lib/types';
+import type { Intersection, ViewMode } from '@/lib/types';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
+const INTERSECTION_ZOOM = 19.5;
+
 interface MapViewProps {
-  progress: number;
+  intersection: Intersection | null;
   viewMode: ViewMode;
   cortlandLine: Feature<LineString> | null;
   children?: React.ReactNode;
 }
 
 export default function MapView({
-  progress,
+  intersection,
   viewMode,
-  cortlandLine,
+  cortlandLine: _cortlandLine,
   children,
 }: MapViewProps) {
   const mapRef = useRef<MapRef>(null);
-  const prevProgressRef = useRef(progress);
-  // Track user-adjusted zoom separately so pinch-to-zoom is preserved
-  const userZoomRef = useRef(DEFAULT_ZOOM);
+  const prevIntersectionRef = useRef<Intersection | null>(null);
+  const userZoomRef = useRef(INTERSECTION_ZOOM);
 
-  const updateCamera = useCallback(
-    (prog: number) => {
-      if (!mapRef.current || !cortlandLine) return;
-      const [lng, lat] = interpolateAlongLine(cortlandLine, prog);
-      mapRef.current.easeTo({
-        center: [lng, lat],
-        bearing: CORTLAND_BEARING,
-        pitch: 0,
-        zoom: userZoomRef.current,
-        duration: 120,
-        easing: (t) => t,
-      });
-    },
-    [cortlandLine]
-  );
+  const updateCamera = useCallback((int: Intersection) => {
+    if (!mapRef.current) return;
+    mapRef.current.easeTo({
+      center: [int.lng, int.lat],
+      bearing: CORTLAND_BEARING,
+      pitch: 0,
+      zoom: userZoomRef.current,
+      duration: 500,
+      easing: (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+    });
+  }, []);
 
   useEffect(() => {
-    if (Math.abs(progress - prevProgressRef.current) > 0.001) {
-      updateCamera(progress);
-      prevProgressRef.current = progress;
+    if (!intersection) return;
+    const prev = prevIntersectionRef.current;
+    if (!prev || prev.name !== intersection.name) {
+      updateCamera(intersection);
+      prevIntersectionRef.current = intersection;
     }
-  }, [progress, updateCamera]);
+  }, [intersection, updateCamera]);
 
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -77,14 +74,16 @@ export default function MapView({
     );
   }
 
+  const initialCenter = intersection ?? CORTLAND_CENTER;
+
   return (
     <Map
       ref={mapRef}
       mapboxAccessToken={mapboxToken}
       initialViewState={{
-        longitude: CORTLAND_CENTER.lng,
-        latitude: CORTLAND_CENTER.lat,
-        zoom: DEFAULT_ZOOM,
+        longitude: initialCenter.lng,
+        latitude: initialCenter.lat,
+        zoom: INTERSECTION_ZOOM,
         bearing: CORTLAND_BEARING,
         pitch: 0,
       }}
@@ -94,7 +93,6 @@ export default function MapView({
       dragPan={false}
       dragRotate={false}
       keyboard={false}
-      // Allow pinch-to-zoom on mobile; capture zoom changes to preserve level
       touchZoomRotate={{ around: 'center' }}
       doubleClickZoom={false}
       minZoom={MIN_ZOOM}

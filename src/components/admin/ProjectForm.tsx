@@ -2,10 +2,13 @@
 
 import { useState } from 'react';
 import { TYPE_LABELS, STATUS_LABELS } from '@/lib/constants';
-import type { Project, ProjectType, ProjectStatus, StreetSide } from '@/lib/types';
+import { geometryCentroid } from '@/lib/intersection-geometry-admin';
+import IntersectionEditor from './IntersectionEditor';
+import type { Project, ProjectType, ProjectStatus, StreetSide, GeoJSONGeometry, Intersection } from '@/lib/types';
 
 interface ProjectFormProps {
   project?: Project;
+  intersections?: Intersection[];
   onSave: (project: Project) => void;
   onCancel: () => void;
 }
@@ -21,7 +24,7 @@ const SIDES: StreetSide[] = ['north', 'south', 'center', 'both'];
 const DEFAULT_LNG = -122.39987;
 const DEFAULT_LAT = 37.73943;
 
-export default function ProjectForm({ project, onSave, onCancel }: ProjectFormProps) {
+export default function ProjectForm({ project, intersections, onSave, onCancel }: ProjectFormProps) {
   const [form, setForm] = useState<Omit<Project, 'id'>>({
     name: project?.name ?? '',
     type: project?.type ?? 'daylighting',
@@ -35,7 +38,10 @@ export default function ProjectForm({ project, onSave, onCancel }: ProjectFormPr
     links: project?.links ?? [],
     date: project?.date ?? new Date().toISOString().split('T')[0],
     tags: project?.tags ?? [],
+    geometry: project?.geometry,
+    intersectionId: project?.intersectionId,
   });
+  const [showDrawer, setShowDrawer] = useState(false);
 
   const [tagInput, setTagInput] = useState('');
   const [linkLabel, setLinkLabel] = useState('');
@@ -153,7 +159,55 @@ export default function ProjectForm({ project, onSave, onCancel }: ProjectFormPr
             <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="underline">Google Maps</a>{' '}
             to copy coordinates.
           </p>
+
+          {/* Geometry drawing */}
+          {intersections && intersections.length > 0 && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setShowDrawer(true)}
+                className="text-xs text-green-700 font-medium px-3 py-1.5 border border-green-200 rounded-lg hover:bg-green-50 flex items-center gap-1.5"
+              >
+                <span>📍</span>
+                {form.geometry ? 'Redraw on Map' : 'Draw on Map'}
+              </button>
+              {form.geometry && (
+                <p className="text-xs text-slate-500 mt-1.5">
+                  Geometry: <span className="font-medium text-green-700">{form.geometry.type}</span>
+                  {form.geometry.type === 'LineString' && ` (${form.geometry.coordinates.length} points)`}
+                  {form.geometry.type === 'Polygon' && ` (${form.geometry.coordinates[0].length - 1} vertices)`}
+                  {' '}
+                  <button
+                    type="button"
+                    onClick={() => set('geometry', undefined)}
+                    className="text-red-400 hover:text-red-600 ml-1"
+                  >
+                    ×
+                  </button>
+                </p>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* Intersection geometry drawer modal */}
+        {showDrawer && intersections && (
+          <IntersectionEditor
+            intersections={intersections}
+            initialIntersectionIndex={form.intersectionId ?? 0}
+            onGeometryComplete={(geometry, intersectionIndex) => {
+              const centroid = geometryCentroid(geometry as { type: string; coordinates: unknown });
+              setForm((f) => ({
+                ...f,
+                geometry: geometry as GeoJSONGeometry,
+                intersectionId: intersectionIndex,
+                ...(centroid ? { lng: centroid[0], lat: centroid[1] } : {}),
+              }));
+              setShowDrawer(false);
+            }}
+            onClose={() => setShowDrawer(false)}
+          />
+        )}
 
         {/* Side + Span */}
         <div className="grid grid-cols-2 gap-4">

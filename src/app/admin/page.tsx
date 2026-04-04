@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import ProjectList from '@/components/admin/ProjectList';
 import ProjectForm from '@/components/admin/ProjectForm';
-import type { Project } from '@/lib/types';
+import type { Project, Intersection } from '@/lib/types';
 import { BRAND } from '@/lib/constants';
+import { extractIntersections } from '@/lib/geo';
 
 export default function AdminPage() {
   const [token, setToken] = useState<string | null>(null);
+  const [intersections, setIntersections] = useState<Intersection[]>([]);
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [projects, setProjects] = useState<Project[]>([]);
@@ -21,6 +23,11 @@ export default function AdminPage() {
       setToken(saved);
       fetchProjects(saved);
     }
+    // Load intersections for geometry drawing
+    fetch('/data/cortland.geojson')
+      .then((r) => r.json())
+      .then((geojson) => setIntersections(extractIntersections(geojson)))
+      .catch(() => {});
   }, []);
 
   async function handleLogin(e: React.FormEvent) {
@@ -142,6 +149,7 @@ export default function AdminPage() {
             </button>
             <ProjectForm
               project={editingProject ?? undefined}
+              intersections={intersections}
               onSave={handleSave}
               onCancel={() => { setShowForm(false); setEditingProject(null); }}
             />

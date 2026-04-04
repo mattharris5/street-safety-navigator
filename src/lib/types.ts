@@ -27,7 +27,15 @@ export interface Project {
   links?: { label: string; url: string }[];
   date?: string;
   tags?: string[];
+  geometry?: GeoJSONGeometry;
+  intersectionId?: number;
 }
+
+/** Subset of GeoJSON geometry types used for project drawings */
+export type GeoJSONGeometry =
+  | { type: 'Point'; coordinates: [number, number] }
+  | { type: 'LineString'; coordinates: [number, number][] }
+  | { type: 'Polygon'; coordinates: [number, number][][] };
 
 export type IncidentSeverity = 'fatal' | 'severe' | 'moderate' | 'minor';
 export type IncidentType = 'pedestrian' | 'cyclist' | 'vehicle';

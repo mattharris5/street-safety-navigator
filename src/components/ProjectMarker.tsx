@@ -9,9 +9,11 @@ interface ProjectMarkerProps {
   project: Project;
   selected: boolean;
   onClick: (project: Project) => void;
+  editMode?: boolean;
+  onDragEnd?: (project: Project, lng: number, lat: number) => void;
 }
 
-export default function ProjectMarker({ project, selected, onClick }: ProjectMarkerProps) {
+export default function ProjectMarker({ project, selected, onClick, editMode = false, onDragEnd }: ProjectMarkerProps) {
   const color = STATUS_COLORS[project.status];
   const icon = TYPE_ICONS[project.type];
 
@@ -29,15 +31,29 @@ export default function ProjectMarker({ project, selected, onClick }: ProjectMar
       longitude={markerLng}
       latitude={markerLat}
       anchor="center"
+      draggable={editMode}
+      onDragEnd={editMode && onDragEnd ? (e) => onDragEnd(project, e.lngLat.lng, e.lngLat.lat) : undefined}
       onClick={(e) => {
         e.originalEvent.stopPropagation();
         onClick(project);
       }}
     >
       <div
-        className="relative cursor-pointer group"
-        style={{ transform: selected ? 'scale(1.25)' : undefined, transition: 'transform 0.15s ease' }}
+        className="relative group"
+        style={{
+          cursor: editMode ? 'move' : 'pointer',
+          transform: selected ? 'scale(1.25)' : undefined,
+          transition: 'transform 0.15s ease',
+        }}
       >
+        {/* Edit mode drag handle ring */}
+        {editMode && (
+          <div
+            className="absolute rounded-full pointer-events-none"
+            style={{ inset: -5, border: '2px dashed rgba(255,255,255,0.85)', borderRadius: '50%' }}
+          />
+        )}
+
         {/* Flat circular marker — sits on the map surface like a painted mark */}
         <div
           className="flex items-center justify-center rounded-full border-2 border-white shadow-md text-sm"

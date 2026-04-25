@@ -6,12 +6,14 @@ interface UseStreetScrollOptions {
   initialProgress?: number;
   sensitivity?: number;
   onProgressChange?: (progress: number) => void;
+  disabled?: boolean;
 }
 
 export function useStreetScroll({
   initialProgress = 0.5,
   sensitivity = 0.0008,
   onProgressChange,
+  disabled = false,
 }: UseStreetScrollOptions = {}) {
   const [progress, setProgress] = useState(initialProgress);
   const progressRef = useRef(initialProgress);
@@ -47,6 +49,7 @@ export function useStreetScroll({
   }, []);
 
   useEffect(() => {
+    if (disabled) return;
     const container = document.getElementById('street-explorer');
     if (!container) return;
 
@@ -118,7 +121,7 @@ export function useStreetScroll({
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       stopMomentum();
     };
-  }, [updateProgress, sensitivity, stopMomentum]);
+  }, [updateProgress, sensitivity, stopMomentum, disabled]);
 
   return { progress, setProgress };
 }

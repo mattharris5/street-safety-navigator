@@ -6,6 +6,7 @@ import type { Project, ProjectType, ProjectStatus, StreetSide } from '@/lib/type
 
 interface ProjectFormProps {
   project?: Project;
+  initialValues?: { lng?: number; lat?: number };
   onSave: (project: Project) => void;
   onCancel: () => void;
 }
@@ -21,14 +22,14 @@ const SIDES: StreetSide[] = ['north', 'south', 'center', 'both'];
 const DEFAULT_LNG = -122.39987;
 const DEFAULT_LAT = 37.73943;
 
-export default function ProjectForm({ project, onSave, onCancel }: ProjectFormProps) {
+export default function ProjectForm({ project, initialValues, onSave, onCancel }: ProjectFormProps) {
   const [form, setForm] = useState<Omit<Project, 'id'>>({
     name: project?.name ?? '',
     type: project?.type ?? 'daylighting',
     status: project?.status ?? 'idea',
     description: project?.description ?? '',
-    lng: project?.lng ?? DEFAULT_LNG,
-    lat: project?.lat ?? DEFAULT_LAT,
+    lng: project?.lng ?? initialValues?.lng ?? DEFAULT_LNG,
+    lat: project?.lat ?? initialValues?.lat ?? DEFAULT_LAT,
     side: project?.side ?? 'both',
     spanMeters: project?.spanMeters,
     images: project?.images ?? [],

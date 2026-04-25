@@ -14,7 +14,8 @@ import Header from './Header';
 import ViewToggle from './ViewToggle';
 import MiniMap from './MiniMap';
 import FilterBar from './FilterBar';
-import type { Project, Incident, ViewMode, FilterState, Intersection } from '@/lib/types';
+import ProjectForm from './admin/ProjectForm';
+import type { Project, Incident, ViewMode, FilterState } from '@/lib/types';
 
 interface StreetExplorerProps {
   cortlandGeoJSON: GeoJSON.FeatureCollection;
@@ -31,10 +32,21 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
     showIncidents: true,
   });
 
+  // Edit mode
+  const [editMode, setEditMode] = useState(false);
+  const [adminToken, setAdminToken] = useState<string | null>(null);
+  const [showAuth, setShowAuth] = useState(false);
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  // formState: null = closed, { coords } = new pin, { project } = editing existing
+  const [formState, setFormState] = useState<{
+    project?: Project;
+    coords?: { lng: number; lat: number };
+  } | null>(null);
+
   const cortlandLine = useMemo(() => extractLineString(cortlandGeoJSON), [cortlandGeoJSON]);
   const intersections = useMemo(() => extractIntersections(cortlandGeoJSON), [cortlandGeoJSON]);
 
-  // Pre-compute each intersection's progress value (0–1) along the line
   const intersectionProgress = useMemo(() => {
     if (!cortlandLine) return [];
     return intersections.map((int) => ({
@@ -43,35 +55,41 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
     }));
   }, [cortlandLine, intersections]);
 
-  const { progress, setProgress } = useStreetScroll({ initialProgress: 0.5 });
-  const { projects } = useProjects();
+  const { progress, setProgress } = useStreetScroll({
+    initialProgress: 0.5,
+    disabled: editMode,
+  });
+  const { projects: fetchedProjects, refetch } = useProjects();
   const { incidents } = useIncidents();
 
+  // Local copy of projects for optimistic updates during edit
+  const [localProjects, setLocalProjects] = useState<Project[]>([]);
+  useEffect(() => {
+    if (!editMode) setLocalProjects(fetchedProjects);
+  }, [fetchedProjects, editMode]);
+
+  // Check for existing admin session
+  useEffect(() => {
+    const saved = sessionStorage.getItem('admin-token');
+    if (saved) setAdminToken(saved);
+  }, []);
+
   const filteredProjects = useMemo(
-    () => projects.filter(
+    () => localProjects.filter(
       (p) =>
         filters.statuses.includes(p.status) &&
         (filters.types.length === 0 || filters.types.includes(p.type))
     ),
-    [projects, filters]
+    [localProjects, filters]
   );
 
-  // Derive current block label from progress
   const currentBlock = useMemo(() => {
     if (!intersectionProgress.length) return null;
     const sorted = [...intersectionProgress].sort((a, b) => a.progress - b.progress);
-
-    // Find the nearest intersection
     const nearest = sorted.reduce((best, int) =>
       Math.abs(int.progress - progress) < Math.abs(best.progress - progress) ? int : best
     );
-
-    // If very close to an intersection, show "@ Name"
-    if (Math.abs(nearest.progress - progress) < 0.04) {
-      return `@ ${nearest.name}`;
-    }
-
-    // Otherwise show "Between A & B"
+    if (Math.abs(nearest.progress - progress) < 0.04) return `@ ${nearest.name}`;
     const before = [...sorted].reverse().find((i) => i.progress <= progress);
     const after = sorted.find((i) => i.progress > progress);
     if (before && after) return `${before.shortName} → ${after.shortName}`;
@@ -80,14 +98,90 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
     return null;
   }, [progress, intersectionProgress]);
 
+  // ── Edit mode handlers ──────────────────────────────────────────────────
+
+  function toggleEdit() {
+    if (editMode) {
+      setEditMode(false);
+      setFormState(null);
+      setSelectedItem(null);
+      refetch(); // useEffect will sync localProjects once fetchedProjects updates
+      return;
+    }
+    if (adminToken) {
+      setEditMode(true);
+      setSelectedItem(null);
+    } else {
+      setShowAuth(true);
+    }
+  }
+
+  async function handleAuth(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthError('');
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: authPassword }),
+    });
+    if (res.ok) {
+      const { token } = await res.json();
+      sessionStorage.setItem('admin-token', token);
+      setAdminToken(token);
+      setShowAuth(false);
+      setEditMode(true);
+      setSelectedItem(null);
+      setAuthPassword('');
+    } else {
+      setAuthError('Wrong password');
+    }
+  }
+
+  function handleMapClick(lng: number, lat: number) {
+    setFormState({ coords: { lng, lat } });
+  }
+
+  async function handleDragEnd(project: Project, lng: number, lat: number) {
+    const updated: Project = { ...project, lng, lat, side: 'center' };
+    setLocalProjects((prev) => prev.map((p) => p.id === project.id ? updated : p));
+    await fetch('/api/projects', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken! },
+      body: JSON.stringify(updated),
+    });
+  }
+
+  async function handleFormSave(project: Project) {
+    const isNew = !localProjects.find((p) => p.id === project.id);
+    await fetch('/api/projects', {
+      method: isNew ? 'POST' : 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken! },
+      body: JSON.stringify(project),
+    });
+    if (isNew) {
+      setLocalProjects((prev) => [...prev, project]);
+    } else {
+      setLocalProjects((prev) => prev.map((p) => p.id === project.id ? project : p));
+    }
+    setFormState(null);
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────
+
   return (
     <div
       id="street-explorer"
       className="relative w-full h-screen overflow-hidden bg-slate-100 select-none"
-      style={{ cursor: 'grab', touchAction: 'none' }}
+      style={{ cursor: editMode ? 'crosshair' : 'grab', touchAction: 'none' }}
     >
       {/* Map fills the full viewport */}
-      <MapView progress={progress} viewMode={viewMode} cortlandLine={cortlandLine}>
+      <MapView
+        progress={progress}
+        viewMode={viewMode}
+        cortlandLine={cortlandLine}
+        editMode={editMode}
+        onMapClick={editMode ? handleMapClick : undefined}
+      >
         {/* Intersection labels */}
         {intersections.map((int) => (
           <IntersectionMarker key={int.name} intersection={int} />
@@ -98,8 +192,12 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
           <ProjectMarker
             key={project.id}
             project={project}
-            selected={selectedItem?.type === 'project' && selectedItem.data.id === project.id}
-            onClick={(p) => setSelectedItem({ type: 'project', data: p })}
+            selected={!editMode && selectedItem?.type === 'project' && selectedItem.data.id === project.id}
+            onClick={editMode
+              ? (p) => setFormState({ project: p })
+              : (p) => setSelectedItem({ type: 'project', data: p })}
+            editMode={editMode}
+            onDragEnd={handleDragEnd}
           />
         ))}
 
@@ -115,7 +213,7 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
       </MapView>
 
       {/* Header bar */}
-      <Header projectCount={projects.length} />
+      <Header projectCount={localProjects.length} />
 
       {/* Controls toolbar */}
       <div className="absolute top-16 left-4 right-4 z-10 flex items-center justify-between gap-3 flex-wrap">
@@ -126,8 +224,15 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
         </div>
       </div>
 
-      {/* Current block indicator */}
-      {currentBlock && (
+      {/* Current block / edit hint */}
+      {editMode ? (
+        <div className="absolute top-28 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+          <div className="bg-green-700/90 text-white text-[11px] font-medium px-3 py-1 rounded-full
+                          backdrop-blur-sm whitespace-nowrap shadow-sm tracking-wide">
+            Click map to add pin · Drag pins to reposition
+          </div>
+        </div>
+      ) : currentBlock && (
         <div className="absolute top-28 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
           <div className="bg-slate-900/75 text-white text-[11px] font-medium px-3 py-1 rounded-full
                           backdrop-blur-sm whitespace-nowrap shadow-sm tracking-wide">
@@ -137,10 +242,74 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
       )}
 
       {/* Scroll hint */}
-      <ScrollHint />
+      {!editMode && <ScrollHint />}
 
-      {/* Detail panel */}
-      <DetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />
+      {/* Edit mode toggle button */}
+      <button
+        onClick={toggleEdit}
+        className={`absolute bottom-6 right-4 z-20 flex items-center gap-1.5 px-3 py-2 rounded-full
+                    text-xs font-medium shadow-md transition-all select-none
+                    ${editMode
+                      ? 'bg-green-700 text-white hover:bg-green-800'
+                      : 'bg-white/90 backdrop-blur-sm text-slate-700 border border-slate-200 hover:bg-white'
+                    }`}
+      >
+        {editMode ? '✓ Done Editing' : '✎ Edit Map'}
+      </button>
+
+      {/* Detail panel (hidden in edit mode) */}
+      {!editMode && <DetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />}
+
+      {/* Auth modal */}
+      {showAuth && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-80">
+            <h3 className="font-semibold text-slate-800 mb-1">Admin Access</h3>
+            <p className="text-xs text-slate-500 mb-4">Enter your admin password to edit the map.</p>
+            <form onSubmit={handleAuth} className="space-y-3">
+              <input
+                type="password"
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                autoFocus
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm
+                           focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Admin password"
+              />
+              {authError && <p className="text-red-500 text-xs">{authError}</p>}
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="flex-1 bg-green-700 text-white rounded-lg py-2 text-sm font-medium hover:bg-green-800"
+                >
+                  Unlock
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowAuth(false); setAuthError(''); setAuthPassword(''); }}
+                  className="px-4 border border-slate-200 text-slate-600 rounded-lg py-2 text-sm hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Project form modal */}
+      {formState !== null && (
+        <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div className="min-h-full flex items-center justify-center p-4">
+            <ProjectForm
+              project={formState.project}
+              initialValues={formState.coords}
+              onSave={handleFormSave}
+              onCancel={() => setFormState(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

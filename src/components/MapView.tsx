@@ -21,6 +21,8 @@ interface MapViewProps {
   viewMode: ViewMode;
   cortlandLine: Feature<LineString> | null;
   children?: React.ReactNode;
+  editMode?: boolean;
+  onMapClick?: (lng: number, lat: number) => void;
 }
 
 export default function MapView({
@@ -28,6 +30,8 @@ export default function MapView({
   viewMode,
   cortlandLine,
   children,
+  editMode = false,
+  onMapClick,
 }: MapViewProps) {
   const mapRef = useRef<MapRef>(null);
   const prevProgressRef = useRef(progress);
@@ -91,15 +95,15 @@ export default function MapView({
       mapStyle={viewMode === 'satellite' ? MAPBOX_STYLE_SATELLITE : MAPBOX_STYLE_MAP}
       style={{ width: '100%', height: '100%' }}
       scrollZoom={false}
-      dragPan={false}
+      dragPan={editMode}
       dragRotate={false}
       keyboard={false}
-      // Allow pinch-to-zoom on mobile; capture zoom changes to preserve level
       touchZoomRotate={{ around: 'center' }}
       doubleClickZoom={false}
       minZoom={MIN_ZOOM}
       maxZoom={MAX_ZOOM}
       onZoom={(e) => { userZoomRef.current = e.viewState.zoom; }}
+      onClick={editMode && onMapClick ? (e) => onMapClick(e.lngLat.lng, e.lngLat.lat) : undefined}
     >
       {children}
     </Map>

@@ -171,7 +171,7 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
   return (
     <div
       id="street-explorer"
-      className="relative w-full h-screen overflow-hidden bg-slate-100 select-none"
+      className="relative w-full h-full overflow-hidden bg-slate-100 select-none"
       style={{ cursor: editMode ? 'crosshair' : 'grab', touchAction: 'none' }}
     >
       {/* Map fills the full viewport */}

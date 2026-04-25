@@ -15,7 +15,7 @@ interface ProjectMarkerProps {
 
 export default function ProjectMarker({ project, selected, onClick, editMode = false, onDragEnd }: ProjectMarkerProps) {
   const color = STATUS_COLORS[project.status];
-  const icon = TYPE_ICONS[project.type];
+  const Icon = TYPE_ICONS[project.type];
 
   // Offset marker to correct side of street
   const [markerLng, markerLat] = offsetForSide(
@@ -68,7 +68,7 @@ export default function ProjectMarker({ project, selected, onClick, editMode = f
           }}
           title={project.name}
         >
-          <span style={{ fontSize: selected ? 16 : 13 }}>{icon}</span>
+          <Icon size={selected ? 15 : 12} strokeWidth={2} />
         </div>
 
         {/* Pulse ring when selected */}

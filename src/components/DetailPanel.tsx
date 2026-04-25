@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X, AlertTriangle } from 'lucide-react';
 import {
   STATUS_COLORS,
   STATUS_BG_COLORS,
@@ -99,7 +100,7 @@ export default function DetailPanel({ item, onClose }: DetailPanelProps) {
             onClick={onClose}
             className="absolute top-2.5 right-4 w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200 transition-colors text-sm z-10"
           >
-            ✕
+            <X size={14} />
           </button>
 
           {/* Scrollable content — touch-action:pan-y lets the browser scroll normally */}
@@ -122,15 +123,16 @@ export default function DetailPanel({ item, onClose }: DetailPanelProps) {
 function ProjectDetail({ project }: { project: Project }) {
   const statusColor = STATUS_COLORS[project.status];
   const statusBg = STATUS_BG_COLORS[project.status];
+  const TypeIcon = TYPE_ICONS[project.type];
 
   return (
     <div>
       <div className="flex items-start gap-3 mb-3">
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{ backgroundColor: statusBg }}
         >
-          {TYPE_ICONS[project.type]}
+          <TypeIcon size={20} strokeWidth={1.75} style={{ color: statusColor }} />
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-base font-semibold text-slate-800 leading-tight">{project.name}</h2>
@@ -202,8 +204,8 @@ function IncidentDetail({ incident }: { incident: Incident }) {
   return (
     <div>
       <div className="flex items-start gap-3 mb-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl bg-red-50 flex-shrink-0">
-          ⚠️
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-red-50 flex-shrink-0">
+          <AlertTriangle size={20} strokeWidth={1.75} className="text-red-500" />
         </div>
         <div>
           <h2 className="text-base font-semibold text-slate-800">Traffic Incident</h2>

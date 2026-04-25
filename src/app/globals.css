@@ -2,10 +2,15 @@
 
 :root {
   --font-sans: var(--font-inter);
+  --font-display: var(--font-fraunces);
 }
 
 @theme inline {
   --font-sans: var(--font-inter);
+  --font-display: var(--font-fraunces);
+
+  /* Green-tinted card shadow for project cards */
+  --shadow-card: 0 2px 12px 0 rgb(15 61 46 / 0.08);
 }
 
 * {

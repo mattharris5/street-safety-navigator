@@ -1,9 +1,10 @@
 import along from '@turf/along';
 import length from '@turf/length';
 import nearestPointOnLine from '@turf/nearest-point-on-line';
+import distance from '@turf/distance';
 import { lineString, point } from '@turf/helpers';
 import type { Feature, LineString, Position } from 'geojson';
-import type { StreetSide } from './types';
+import type { Intersection, StreetSide } from './types';
 
 /**
  * Offset a [lng, lat] point perpendicular to the street by a given number of meters.
@@ -103,4 +104,28 @@ export function extractIntersections(geojson: GeoJSON.FeatureCollection) {
       lng: (f.geometry as GeoJSON.Point).coordinates[0],
       lat: (f.geometry as GeoJSON.Point).coordinates[1],
     }));
+}
+
+/**
+ * Returns the name of the nearest intersection within radiusMeters, or null.
+ */
+export function nearestIntersectionName(
+  lng: number,
+  lat: number,
+  intersections: Intersection[],
+  radiusMeters = 150
+): string | null {
+  const pt = point([lng, lat]);
+  let bestName: string | null = null;
+  let bestDist = Infinity;
+
+  for (const int of intersections) {
+    const dist = distance(pt, point([int.lng, int.lat]), { units: 'meters' });
+    if (dist < radiusMeters && dist < bestDist) {
+      bestDist = dist;
+      bestName = int.name;
+    }
+  }
+
+  return bestName;
 }

@@ -1,3 +1,8 @@
+import type { LucideIcon } from 'lucide-react';
+import {
+  Leaf, Palette, Triangle, Eye, Footprints,
+  MoveHorizontal, CornerDownRight, TrafficCone, MapPin,
+} from 'lucide-react';
 import type { ProjectStatus, ProjectType } from './types';
 
 // Cortland Ave runs roughly west-to-east at bearing ~5 degrees
@@ -61,17 +66,16 @@ export const TYPE_LABELS: Record<ProjectType, string> = {
   other: 'Other',
 };
 
-// Type icons (emoji for now, can be replaced with SVG icons)
-export const TYPE_ICONS: Record<ProjectType, string> = {
-  planter: '🌿',
-  'street-mural': '🎨',
-  'flex-post': '🟡',
-  daylighting: '💡',
-  crosswalk: '🦓',
-  'speed-bump': '🚦',
-  'curb-extension': '🛑',
-  signal: '🚥',
-  other: '📍',
+export const TYPE_ICONS: Record<ProjectType, LucideIcon> = {
+  planter: Leaf,
+  'street-mural': Palette,
+  'flex-post': Triangle,
+  daylighting: Eye,
+  crosswalk: Footprints,
+  'speed-bump': MoveHorizontal,
+  'curb-extension': CornerDownRight,
+  signal: TrafficCone,
+  other: MapPin,
 };
 
 // Branding

@@ -2,14 +2,13 @@ import { readFileSync } from 'fs';
 import path from 'path';
 import type { Project } from './types';
 import { extractIntersections } from './geo';
+import { getSupabase, BUCKET } from './supabase';
+
+const PROJECTS_PATH = 'data/projects.json';
 
 export async function getProjects(): Promise<Project[]> {
-  if (process.env.PROJECTS_BLOB_URL) {
-    const res = await fetch(process.env.PROJECTS_BLOB_URL, {
-      next: { revalidate: 30 },
-    });
-    return res.json();
-  }
+  const { data, error } = await getSupabase().storage.from(BUCKET).download(PROJECTS_PATH);
+  if (!error && data) return JSON.parse(await data.text());
   const file = path.join(process.cwd(), 'public/data/projects.json');
   return JSON.parse(readFileSync(file, 'utf-8'));
 }

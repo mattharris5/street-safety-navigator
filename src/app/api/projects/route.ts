@@ -1,127 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { getSupabase, BUCKET } from '@/lib/supabase';
 import type { Project } from '@/lib/types';
 
-function getProjectsFromFile(): Project[] {
+const PROJECTS_PATH = 'data/projects.json';
+
+async function loadProjects(): Promise<Project[]> {
+  const { data, error } = await getSupabase().storage.from(BUCKET).download(PROJECTS_PATH);
+  if (!error && data) {
+    return JSON.parse(await data.text());
+  }
+  // Fall back to the static seed file
   try {
-    const filePath = join(process.cwd(), 'public', 'data', 'projects.json');
-    const data = readFileSync(filePath, 'utf-8');
-    return JSON.parse(data);
+    return JSON.parse(readFileSync(join(process.cwd(), 'public/data/projects.json'), 'utf-8'));
   } catch {
     return [];
   }
 }
 
-// In production with Vercel Blob, we'd read/write from Blob storage.
-// For local dev and initial deployment, we read from the static file.
-// The admin routes handle persistence via Vercel Blob when available.
-let projectsCache: Project[] | null = null;
-let cacheTime = 0;
-const CACHE_TTL = 10_000; // 10 seconds
+async function saveProjects(projects: Project[]): Promise<void> {
+  const bytes = new TextEncoder().encode(JSON.stringify(projects, null, 2));
+  await getSupabase().storage.from(BUCKET).upload(PROJECTS_PATH, bytes, {
+    contentType: 'application/json',
+    upsert: true,
+  });
+}
 
-function getProjects(): Project[] {
-  const now = Date.now();
-  if (!projectsCache || now - cacheTime > CACHE_TTL) {
-    projectsCache = getProjectsFromFile();
-    cacheTime = now;
-  }
-  return projectsCache;
+function checkAuth(req: NextRequest) {
+  return req.headers.get('x-admin-token') === process.env.ADMIN_PASSWORD;
 }
 
 export async function GET() {
-  // Try blob storage first (set via env after first save from admin)
-  const blobUrl = process.env.PROJECTS_BLOB_URL;
-  if (blobUrl) {
-    try {
-      const res = await fetch(blobUrl, { next: { revalidate: 10 } });
-      if (res.ok) {
-        const data = await res.json();
-        return NextResponse.json(data);
-      }
-    } catch {}
-  }
-
-  return NextResponse.json(getProjects());
+  return NextResponse.json(await loadProjects());
 }
 
 export async function POST(req: NextRequest) {
-  // Auth check
-  const auth = req.headers.get('x-admin-token');
-  if (auth !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  try {
-    const project: Project = await req.json();
-    if (!project.id) project.id = `proj-${Date.now()}`;
-
-    let projects = getProjects();
-    projects = [...projects, project];
-
-    await persistProjects(projects);
-    projectsCache = projects;
-    cacheTime = Date.now();
-
-    return NextResponse.json(project, { status: 201 });
-  } catch (err) {
-    return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
-  }
+  if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const project: Project = await req.json();
+  if (!project.id) project.id = `proj-${Date.now()}`;
+  const projects = [...(await loadProjects()), project];
+  await saveProjects(projects);
+  return NextResponse.json(project, { status: 201 });
 }
 
 export async function PUT(req: NextRequest) {
-  const auth = req.headers.get('x-admin-token');
-  if (auth !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  try {
-    const updated: Project = await req.json();
-    let projects = getProjects();
-    projects = projects.map((p) => (p.id === updated.id ? updated : p));
-
-    await persistProjects(projects);
-    projectsCache = projects;
-    cacheTime = Date.now();
-
-    return NextResponse.json(updated);
-  } catch {
-    return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
-  }
+  if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const updated: Project = await req.json();
+  const projects = (await loadProjects()).map((p) => (p.id === updated.id ? updated : p));
+  await saveProjects(projects);
+  return NextResponse.json(updated);
 }
 
 export async function DELETE(req: NextRequest) {
-  const auth = req.headers.get('x-admin-token');
-  if (auth !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get('id');
+  if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
-
-  let projects = getProjects();
-  projects = projects.filter((p) => p.id !== id);
-
-  await persistProjects(projects);
-  projectsCache = projects;
-  cacheTime = Date.now();
-
+  const projects = (await loadProjects()).filter((p) => p.id !== id);
+  await saveProjects(projects);
   return NextResponse.json({ success: true });
-}
-
-async function persistProjects(projects: Project[]): Promise<void> {
-  // Use Vercel Blob in production
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const { put } = await import('@vercel/blob');
-    const blob = await put('projects.json', JSON.stringify(projects, null, 2), {
-      access: 'public',
-      contentType: 'application/json',
-      addRandomSuffix: false,
-    });
-    // Note: In production you'd store blob.url in a persistent env var or KV
-    // For now we log it so the user can set PROJECTS_BLOB_URL
-    console.log('Projects saved to Blob:', blob.url);
-  }
-  // In dev, changes are in-memory only (file not written to avoid git noise)
 }

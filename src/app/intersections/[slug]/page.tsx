@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, AlertTriangle, MessageSquare } from 'lucide-react';
+import { MapPin, AlertTriangle, MessageSquare, ChevronRight } from 'lucide-react';
 import { getSupabase } from '@/lib/supabase';
 import { getProjects } from '@/lib/data';
 import { nearestIntersectionName } from '@/lib/geo';
@@ -97,18 +97,17 @@ export default async function IntersectionPage({ params }: { params: Promise<{ s
                 )}
                 <div className="divide-y divide-stone-100">
                   {crashes.slice(0, 10).map((c) => (
-                    <div key={c.id} className="flex items-center gap-3 py-3">
+                    <Link
+                      key={c.id}
+                      href={`/crashes/${c.datasf_id}`}
+                      className="flex items-center gap-3 py-3 cursor-pointer hover:bg-stone-50 active:bg-stone-100 transition-colors"
+                    >
                       <span className="text-xs text-stone-400 w-24 flex-shrink-0">
                         {c.occurred_at ? new Date(c.occurred_at).toLocaleDateString() : '—'}
                       </span>
                       <span className="text-sm text-stone-700 flex-1 capitalize">{c.severity ?? 'injury'}</span>
-                      <Link
-                        href={`/crashes/${c.datasf_id}`}
-                        className="text-xs font-medium text-green-700 underline flex-shrink-0"
-                      >
-                        Details
-                      </Link>
-                    </div>
+                      <ChevronRight size={14} className="text-stone-400 flex-shrink-0" />
+                    </Link>
                   ))}
                   {crashes.length > 10 && (
                     <p className="text-xs text-stone-400 pt-1">+ {crashes.length - 10} more</p>
@@ -132,7 +131,11 @@ export default async function IntersectionPage({ params }: { params: Promise<{ s
             ) : (
               <div className="divide-y divide-stone-100">
                 {requests.slice(0, 10).map((r) => (
-                  <div key={r.id} className="flex items-center gap-3 py-3">
+                  <Link
+                    key={r.id}
+                    href={`/service-requests/${r.datasf_id}`}
+                    className="flex items-center gap-3 py-3 cursor-pointer hover:bg-stone-50 active:bg-stone-100 transition-colors"
+                  >
                     <span className="text-xs text-stone-400 w-24 flex-shrink-0">
                       {r.opened ? new Date(r.opened).toLocaleDateString() : '—'}
                     </span>
@@ -140,13 +143,8 @@ export default async function IntersectionPage({ params }: { params: Promise<{ s
                     <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
                       r.status === 'Closed' ? 'bg-stone-100 text-stone-500' : 'bg-blue-50 text-blue-700'
                     }`}>{r.status ?? '—'}</span>
-                    <Link
-                      href={`/service-requests/${r.datasf_id}`}
-                      className="text-xs font-medium text-green-700 underline flex-shrink-0"
-                    >
-                      Details
-                    </Link>
-                  </div>
+                    <ChevronRight size={14} className="text-stone-400 flex-shrink-0" />
+                  </Link>
                 ))}
                 {requests.length > 10 && (
                   <p className="text-xs text-stone-400 pt-1">+ {requests.length - 10} more</p>

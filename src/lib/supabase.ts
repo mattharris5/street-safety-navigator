@@ -1,8 +1,25 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
+export type ProjectRow = {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  description: string;
+  lng: number;
+  lat: number;
+  side: string;
+  span_meters: number | null;
+  images: string[];
+  links: { label: string; url: string }[];
+  date: string | null;
+  tags: string[];
+};
 
 export const BUCKET = 'project-images';
 
-let _client: ReturnType<typeof createClient> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _client: SupabaseClient<any> | null = null;
 
 export function getSupabase() {
   if (!_client) {

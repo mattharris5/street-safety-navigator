@@ -58,21 +58,21 @@ export async function GET(req: NextRequest) {
 
   // ── Vision Zero crashes (ubvf-ztfx) ────────────────────────────────────
   try {
-    const bboxWhere = `latitude between '${CORRIDOR_LAT_MIN}' and '${CORRIDOR_LAT_MAX}' AND longitude between '${CORRIDOR_LNG_MIN}' and '${CORRIDOR_LNG_MAX}'`;
+    const bboxWhere = `tb_latitude between '${CORRIDOR_LAT_MIN}' and '${CORRIDOR_LAT_MAX}' AND tb_longitude between '${CORRIDOR_LNG_MIN}' and '${CORRIDOR_LNG_MAX}'`;
     const raw = await fetchDataSF('ubvf-ztfx', bboxWhere, 2000);
     const rows = raw
-      .filter((r: Record<string, string>) => r.case_id_number && r.latitude && r.longitude)
+      .filter((r: Record<string, string>) => r.case_id_pkey && r.tb_latitude && r.tb_longitude)
       .map((r: Record<string, string>) => {
-        const lat = parseFloat(r.latitude);
-        const lng = parseFloat(r.longitude);
+        const lat = parseFloat(r.tb_latitude);
+        const lng = parseFloat(r.tb_longitude);
         return {
-          id: `crash-${r.case_id_number}`,
-          datasf_id: r.case_id_number,
+          id: `crash-${r.case_id_pkey}`,
+          datasf_id: r.case_id_pkey,
           intersection_id: nearestIntersection(lat, lng),
           lat,
           lng,
-          occurred_at: r.collision_datetime ?? r.date ?? null,
-          severity: r.collision_severity ?? r.injury_severity ?? null,
+          occurred_at: r.collision_datetime ?? null,
+          severity: r.collision_severity ?? null,
           raw: r,
         };
       });

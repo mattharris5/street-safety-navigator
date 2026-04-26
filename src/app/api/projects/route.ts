@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase, type ProjectRow } from '@/lib/supabase';
+import { isAdmin } from '@/lib/auth';
 import type { Project, ProjectType, ProjectStatus, StreetSide } from '@/lib/types';
 
 function toRow(p: Project): ProjectRow {
@@ -38,9 +39,7 @@ function fromRow(row: ProjectRow): Project {
   };
 }
 
-function checkAuth(req: NextRequest) {
-  return req.headers.get('x-admin-token') === process.env.ADMIN_PASSWORD;
-}
+const checkAuth = (req: NextRequest) => isAdmin(req);
 
 export async function GET() {
   const { data, error } = await getSupabase()

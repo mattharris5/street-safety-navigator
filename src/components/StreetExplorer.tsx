@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { extractLineString, extractIntersections, progressAlongLine } from '@/lib/geo';
 import { useStreetScroll } from '@/hooks/useStreetScroll';
 import { useProjects } from '@/hooks/useProjects';
 import { useIncidents } from '@/hooks/useIncidents';
+import { createClient } from '@/utils/supabase/client';
 import MapView from './MapView';
 import ProjectMarker from './ProjectMarker';
 import IncidentDot from './IncidentDot';
@@ -22,6 +24,7 @@ interface StreetExplorerProps {
 }
 
 export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps) {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>('map');
   const [selectedItem, setSelectedItem] = useState<
     { type: 'project'; data: Project } | { type: 'incident'; data: Incident } | null
@@ -35,10 +38,6 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
   // Edit mode
   const [editMode, setEditMode] = useState(false);
   const [adminToken, setAdminToken] = useState<string | null>(null);
-  const [showAuth, setShowAuth] = useState(false);
-  const [authPassword, setAuthPassword] = useState('');
-  const [authError, setAuthError] = useState('');
-  // formState: null = closed, { coords } = new pin, { project } = editing existing
   const [formState, setFormState] = useState<{
     project?: Project;
     coords?: { lng: number; lat: number };
@@ -55,23 +54,25 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
     }));
   }, [cortlandLine, intersections]);
 
-  const { progress, setProgress } = useStreetScroll({
-    initialProgress: 0.5,
-    disabled: editMode,
-  });
+  const { progress } = useStreetScroll({ initialProgress: 0.5, disabled: editMode });
   const { projects: fetchedProjects, refetch } = useProjects();
   const { incidents } = useIncidents();
 
-  // Local copy of projects for optimistic updates during edit
   const [localProjects, setLocalProjects] = useState<Project[]>([]);
   useEffect(() => {
     if (!editMode) setLocalProjects(fetchedProjects);
   }, [fetchedProjects, editMode]);
 
-  // Check for existing admin session
+  // Hydrate Supabase session token for API calls
   useEffect(() => {
-    const saved = sessionStorage.getItem('admin-token');
-    if (saved) setAdminToken(saved);
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.access_token) setAdminToken(session.access_token);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAdminToken(session?.access_token ?? null);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   const filteredProjects = useMemo(
@@ -105,35 +106,14 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
       setEditMode(false);
       setFormState(null);
       setSelectedItem(null);
-      refetch(); // useEffect will sync localProjects once fetchedProjects updates
+      refetch();
       return;
     }
     if (adminToken) {
       setEditMode(true);
       setSelectedItem(null);
     } else {
-      setShowAuth(true);
-    }
-  }
-
-  async function handleAuth(e: React.FormEvent) {
-    e.preventDefault();
-    setAuthError('');
-    const res = await fetch('/api/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: authPassword }),
-    });
-    if (res.ok) {
-      const { token } = await res.json();
-      sessionStorage.setItem('admin-token', token);
-      setAdminToken(token);
-      setShowAuth(false);
-      setEditMode(true);
-      setSelectedItem(null);
-      setAuthPassword('');
-    } else {
-      setAuthError('Wrong password');
+      router.push('/login?redirect=/');
     }
   }
 
@@ -174,7 +154,6 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
       className="relative w-full h-full overflow-hidden bg-slate-100 select-none"
       style={{ cursor: editMode ? 'crosshair' : 'grab', touchAction: 'none' }}
     >
-      {/* Map fills the full viewport */}
       <MapView
         progress={progress}
         viewMode={viewMode}
@@ -182,12 +161,10 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
         editMode={editMode}
         onMapClick={editMode ? handleMapClick : undefined}
       >
-        {/* Intersection labels */}
         {intersections.map((int) => (
           <IntersectionMarker key={int.name} intersection={int} />
         ))}
 
-        {/* Project markers */}
         {filteredProjects.map((project) => (
           <ProjectMarker
             key={project.id}
@@ -201,7 +178,6 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
           />
         ))}
 
-        {/* Incident dots */}
         {filters.showIncidents &&
           incidents.map((incident) => (
             <IncidentDot
@@ -212,10 +188,8 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
           ))}
       </MapView>
 
-      {/* Header bar */}
       <Header projectCount={localProjects.length} />
 
-      {/* Controls toolbar */}
       <div className="absolute top-16 left-4 right-4 z-10 flex items-center justify-between gap-3 flex-wrap">
         <FilterBar filters={filters} onChange={setFilters} />
         <div className="flex items-center gap-2 ml-auto">
@@ -224,7 +198,6 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
         </div>
       </div>
 
-      {/* Current block / edit hint */}
       {editMode ? (
         <div className="absolute top-28 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
           <div className="bg-green-700/90 text-white text-[11px] font-medium px-3 py-1 rounded-full
@@ -241,10 +214,8 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
         </div>
       )}
 
-      {/* Scroll hint */}
       {!editMode && <ScrollHint />}
 
-      {/* Edit mode toggle button */}
       <button
         onClick={toggleEdit}
         className={`absolute bottom-6 right-4 z-20 flex items-center gap-1.5 px-3 py-2 rounded-full
@@ -257,47 +228,8 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
         {editMode ? '✓ Done Editing' : '✎ Edit Map'}
       </button>
 
-      {/* Detail panel (hidden in edit mode) */}
       {!editMode && <DetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />}
 
-      {/* Auth modal */}
-      {showAuth && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-80">
-            <h3 className="font-semibold text-slate-800 mb-1">Admin Access</h3>
-            <p className="text-xs text-slate-500 mb-4">Enter your admin password to edit the map.</p>
-            <form onSubmit={handleAuth} className="space-y-3">
-              <input
-                type="password"
-                value={authPassword}
-                onChange={(e) => setAuthPassword(e.target.value)}
-                autoFocus
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm
-                           focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Admin password"
-              />
-              {authError && <p className="text-red-500 text-xs">{authError}</p>}
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="flex-1 bg-green-700 text-white rounded-lg py-2 text-sm font-medium hover:bg-green-800"
-                >
-                  Unlock
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowAuth(false); setAuthError(''); setAuthPassword(''); }}
-                  className="px-4 border border-slate-200 text-slate-600 rounded-lg py-2 text-sm hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Project form modal */}
       {formState !== null && (
         <div className="absolute inset-0 z-50 bg-black/40 backdrop-blur-sm overflow-y-auto">
           <div className="min-h-full flex items-center justify-center p-4">

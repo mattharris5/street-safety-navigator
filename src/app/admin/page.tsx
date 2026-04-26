@@ -1,51 +1,39 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/utils/supabase/client';
 import ProjectList from '@/components/admin/ProjectList';
 import ProjectForm from '@/components/admin/ProjectForm';
 import type { Project } from '@/lib/types';
 import { BRAND } from '@/lib/constants';
+import type { Session } from '@supabase/supabase-js';
 
 export default function AdminPage() {
-  const [token, setToken] = useState<string | null>(null);
-  const [password, setPassword] = useState('');
-  const [authError, setAuthError] = useState('');
+  const router = useRouter();
+  const [session, setSession] = useState<Session | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('admin-token');
-    if (saved) {
-      setToken(saved);
-      fetchProjects(saved);
-    }
-  }, []);
-
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setAuthError('');
-    const res = await fetch('/api/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      if (!s) { router.replace('/login?redirect=/admin'); return; }
+      setSession(s);
+      fetchProjects(s.access_token);
     });
-    if (res.ok) {
-      const { token: t } = await res.json();
-      sessionStorage.setItem('admin-token', t);
-      setToken(t);
-      fetchProjects(t);
-    } else {
-      setAuthError('Invalid password');
-    }
-  }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      if (!s) router.replace('/login?redirect=/admin');
+      else setSession(s);
+    });
+    return () => subscription.unsubscribe();
+  }, [router]);
 
-  async function fetchProjects(t: string) {
+  async function fetchProjects(token: string) {
     setLoading(true);
-    const res = await fetch('/api/projects', {
-      headers: { 'x-admin-token': t },
-    });
+    const res = await fetch('/api/projects', { headers: { 'x-admin-token': token } });
     if (res.ok) setProjects(await res.json());
     setLoading(false);
   }
@@ -54,10 +42,10 @@ export default function AdminPage() {
     const method = editingProject ? 'PUT' : 'POST';
     await fetch('/api/projects', {
       method,
-      headers: { 'Content-Type': 'application/json', 'x-admin-token': token! },
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': session!.access_token },
       body: JSON.stringify(project),
     });
-    await fetchProjects(token!);
+    await fetchProjects(session!.access_token);
     setShowForm(false);
     setEditingProject(null);
   }
@@ -66,49 +54,17 @@ export default function AdminPage() {
     if (!confirm('Delete this project?')) return;
     await fetch(`/api/projects?id=${id}`, {
       method: 'DELETE',
-      headers: { 'x-admin-token': token! },
+      headers: { 'x-admin-token': session!.access_token },
     });
-    await fetchProjects(token!);
+    await fetchProjects(session!.access_token);
   }
 
-  if (!token) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 w-full max-w-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-green-700 text-white flex items-center justify-center font-bold">S</div>
-            <div>
-              <h1 className="font-semibold text-slate-800">{BRAND.name}</h1>
-              <p className="text-xs text-slate-500">Admin Panel</p>
-            </div>
-          </div>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Admin password"
-                autoFocus
-              />
-              {authError && <p className="text-red-500 text-xs mt-1">{authError}</p>}
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-green-700 text-white rounded-lg py-2 text-sm font-medium hover:bg-green-800 transition-colors"
-            >
-              Sign In
-            </button>
-          </form>
-          <div className="mt-4 text-center">
-            <a href="/" className="text-xs text-slate-400 hover:text-slate-600">← Back to map</a>
-          </div>
-        </div>
-      </div>
-    );
+  async function handleSignOut() {
+    await createClient().auth.signOut();
+    router.replace('/login');
   }
+
+  if (!session) return null;
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50">
@@ -122,10 +78,7 @@ export default function AdminPage() {
         </div>
         <div className="flex items-center gap-3">
           <a href="/" className="text-xs text-slate-500 hover:text-slate-700">← View map</a>
-          <button
-            onClick={() => { sessionStorage.removeItem('admin-token'); setToken(null); }}
-            className="text-xs text-slate-400 hover:text-slate-600"
-          >
+          <button onClick={handleSignOut} className="text-xs text-slate-400 hover:text-slate-600">
             Sign out
           </button>
         </div>
@@ -142,7 +95,7 @@ export default function AdminPage() {
             </button>
             <ProjectForm
               project={editingProject ?? undefined}
-              adminToken={token!}
+              adminToken={session.access_token}
               onSave={handleSave}
               onCancel={() => { setShowForm(false); setEditingProject(null); }}
             />

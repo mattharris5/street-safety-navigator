@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase, BUCKET } from '@/lib/supabase';
+import { isAdmin } from '@/lib/auth';
 
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
 
 export async function POST(req: NextRequest) {
   // Auth check — same mechanism as the rest of the API
-  const token = req.headers.get('x-admin-token');
-  if (!token || token !== process.env.ADMIN_PASSWORD) {
+  if (!await isAdmin(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

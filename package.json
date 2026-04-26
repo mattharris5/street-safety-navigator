@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.104.1",
     "@turf/along": "^7.3.4",
     "@turf/helpers": "^7.3.4",
     "@turf/length": "^7.3.4",

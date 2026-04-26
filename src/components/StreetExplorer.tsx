@@ -304,6 +304,7 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
             <ProjectForm
               project={formState.project}
               initialValues={formState.coords}
+              adminToken={adminToken ?? ''}
               onSave={handleFormSave}
               onCancel={() => setFormState(null)}
             />

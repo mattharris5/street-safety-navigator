@@ -142,6 +142,7 @@ export default function AdminPage() {
             </button>
             <ProjectForm
               project={editingProject ?? undefined}
+              adminToken={token!}
               onSave={handleSave}
               onCancel={() => { setShowForm(false); setEditingProject(null); }}
             />

@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { TYPE_LABELS, STATUS_LABELS } from '@/lib/constants';
+import ImageUploader from '@/components/ImageUploader';
 import type { Project, ProjectType, ProjectStatus, StreetSide } from '@/lib/types';
 
 interface ProjectFormProps {
   project?: Project;
   initialValues?: { lng?: number; lat?: number };
+  adminToken: string;
   onSave: (project: Project) => void;
   onCancel: () => void;
 }
@@ -22,7 +24,7 @@ const SIDES: StreetSide[] = ['north', 'south', 'center', 'both'];
 const DEFAULT_LNG = -122.39987;
 const DEFAULT_LAT = 37.73943;
 
-export default function ProjectForm({ project, initialValues, onSave, onCancel }: ProjectFormProps) {
+export default function ProjectForm({ project, initialValues, adminToken, onSave, onCancel }: ProjectFormProps) {
   const [form, setForm] = useState<Omit<Project, 'id'>>({
     name: project?.name ?? '',
     type: project?.type ?? 'daylighting',
@@ -264,6 +266,17 @@ export default function ProjectForm({ project, initialValues, onSave, onCancel }
           </button>
         </div>
       </div>
+
+        {/* Photos */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Photos</label>
+          <ImageUploader
+            images={form.images ?? []}
+            onChange={(imgs) => set('images', imgs)}
+            projectId={project?.id ?? `proj-${Date.now()}`}
+            adminToken={adminToken}
+          />
+        </div>
 
       {/* Buttons */}
       <div className="flex gap-3 mt-8">

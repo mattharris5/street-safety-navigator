@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, BUCKET } from '@/lib/supabase';
+import { getSupabase, BUCKET } from '@/lib/supabase';
 
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   const path = `projects/${projectId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
   const arrayBuffer = await file.arrayBuffer();
-  const { error } = await supabase.storage
+  const { error } = await getSupabase().storage
     .from(BUCKET)
     .upload(path, arrayBuffer, { contentType: file.type, upsert: false });
 
@@ -40,6 +40,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
   }
 
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  const { data } = getSupabase().storage.from(BUCKET).getPublicUrl(path);
   return NextResponse.json({ url: data.publicUrl }, { status: 201 });
 }

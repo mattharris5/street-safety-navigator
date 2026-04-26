@@ -75,7 +75,6 @@ export default function ImageUploader({ images, onChange, projectId, adminToken 
           ref={inputRef}
           type="file"
           accept="image/*"
-          capture="environment"
           multiple
           className="hidden"
           onChange={(e) => e.target.files && uploadFiles(e.target.files)}

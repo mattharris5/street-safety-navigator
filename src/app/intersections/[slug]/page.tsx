@@ -95,13 +95,19 @@ export default async function IntersectionPage({ params }: { params: Promise<{ s
                     ))}
                   </div>
                 )}
-                <div className="space-y-2">
+                <div className="divide-y divide-stone-100">
                   {crashes.slice(0, 10).map((c) => (
-                    <div key={c.id} className="flex items-center gap-3 py-2 border-b border-stone-100 last:border-0">
+                    <div key={c.id} className="flex items-center gap-3 py-3">
                       <span className="text-xs text-stone-400 w-24 flex-shrink-0">
                         {c.occurred_at ? new Date(c.occurred_at).toLocaleDateString() : '—'}
                       </span>
                       <span className="text-sm text-stone-700 flex-1 capitalize">{c.severity ?? 'injury'}</span>
+                      <Link
+                        href={`/crashes/${c.datasf_id}`}
+                        className="text-xs font-medium text-green-700 underline flex-shrink-0"
+                      >
+                        Details
+                      </Link>
                     </div>
                   ))}
                   {crashes.length > 10 && (
@@ -124,16 +130,22 @@ export default async function IntersectionPage({ params }: { params: Promise<{ s
             {requests.length === 0 ? (
               <p className="text-stone-400 text-sm">No 311 requests recorded near this intersection.</p>
             ) : (
-              <div className="space-y-2">
+              <div className="divide-y divide-stone-100">
                 {requests.slice(0, 10).map((r) => (
-                  <div key={r.id} className="flex items-center gap-3 py-2 border-b border-stone-100 last:border-0">
+                  <div key={r.id} className="flex items-center gap-3 py-3">
                     <span className="text-xs text-stone-400 w-24 flex-shrink-0">
                       {r.opened ? new Date(r.opened).toLocaleDateString() : '—'}
                     </span>
                     <span className="text-sm text-stone-700 flex-1">{r.category ?? '—'}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
                       r.status === 'Closed' ? 'bg-stone-100 text-stone-500' : 'bg-blue-50 text-blue-700'
                     }`}>{r.status ?? '—'}</span>
+                    <Link
+                      href={`/service-requests/${r.datasf_id}`}
+                      className="text-xs font-medium text-green-700 underline flex-shrink-0"
+                    >
+                      Details
+                    </Link>
                   </div>
                 ))}
                 {requests.length > 10 && (

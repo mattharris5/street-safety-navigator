@@ -48,6 +48,7 @@ export interface Intersection {
   order: number;
   lng: number;
   lat: number;
+  slug?: string;
 }
 
 export type ViewMode = 'map' | 'satellite';

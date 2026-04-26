@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { extractLineString, extractIntersections, progressAlongLine } from '@/lib/geo';
+import { extractLineString, progressAlongLine } from '@/lib/geo';
 import { useStreetScroll } from '@/hooks/useStreetScroll';
 import { useProjects } from '@/hooks/useProjects';
 import { useIncidents } from '@/hooks/useIncidents';
@@ -17,13 +17,14 @@ import ViewToggle from './ViewToggle';
 import MiniMap from './MiniMap';
 import FilterBar from './FilterBar';
 import ProjectForm from './admin/ProjectForm';
-import type { Project, Incident, ViewMode, FilterState } from '@/lib/types';
+import type { Project, Incident, ViewMode, FilterState, Intersection } from '@/lib/types';
 
 interface StreetExplorerProps {
   cortlandGeoJSON: GeoJSON.FeatureCollection;
+  intersections: Intersection[];
 }
 
-export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps) {
+export default function StreetExplorer({ cortlandGeoJSON, intersections }: StreetExplorerProps) {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>('map');
   const [selectedItem, setSelectedItem] = useState<
@@ -44,7 +45,6 @@ export default function StreetExplorer({ cortlandGeoJSON }: StreetExplorerProps)
   } | null>(null);
 
   const cortlandLine = useMemo(() => extractLineString(cortlandGeoJSON), [cortlandGeoJSON]);
-  const intersections = useMemo(() => extractIntersections(cortlandGeoJSON), [cortlandGeoJSON]);
 
   const intersectionProgress = useMemo(() => {
     if (!cortlandLine) return [];

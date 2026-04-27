@@ -1,13 +1,12 @@
 'use client';
 
 import {
-  ComposedChart,
+  BarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  ReferenceLine,
   ResponsiveContainer,
   Cell,
 } from 'recharts';
@@ -24,85 +23,103 @@ interface Props {
   data: DataPoint[];
 }
 
-// Recharts needs negative values to render bars below the axis
-function toChart(d: DataPoint) {
-  return { ...d, requestsNeg: -d.requests };
-}
-
-function CustomTooltip({ active, payload, label }: {
+function CrashTooltip({ active, payload, label }: {
   active?: boolean;
-  payload?: { name: string; value: number }[];
+  payload?: { value: number }[];
   label?: string;
 }) {
   if (!active || !payload?.length) return null;
-  const crashes = payload.find((p) => p.name === 'crashes')?.value ?? 0;
-  const requests = Math.abs(payload.find((p) => p.name === 'requestsNeg')?.value ?? 0);
+  const v = payload[0].value;
   return (
     <div className="bg-white border border-stone-200 rounded-lg shadow-md px-3 py-2 text-sm">
-      <p className="font-medium text-stone-800 mb-1">{label}</p>
-      <p className="text-red-600">{crashes} crash{crashes !== 1 ? 'es' : ''}</p>
-      <p className="text-blue-600">{requests} 311 report{requests !== 1 ? 's' : ''}</p>
+      <p className="font-medium text-stone-700 mb-0.5">{label}</p>
+      <p className="text-red-600">{v} crash{v !== 1 ? 'es' : ''}</p>
     </div>
   );
 }
 
+function RequestTooltip({ active, payload, label }: {
+  active?: boolean;
+  payload?: { value: number }[];
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const v = payload[0].value;
+  return (
+    <div className="bg-white border border-stone-200 rounded-lg shadow-md px-3 py-2 text-sm">
+      <p className="font-medium text-stone-700 mb-0.5">{label}</p>
+      <p className="text-blue-600">{v} 311 report{v !== 1 ? 's' : ''}</p>
+    </div>
+  );
+}
+
+const SYNC_ID = 'corridor';
+const MARGIN = { top: 8, right: 8, bottom: 4, left: 28 };
+const MARGIN_BOTTOM = { top: 4, right: 8, bottom: 60, left: 28 };
+const BAR_SIZE = 20;
+
 export default function CorridorChart({ data }: Props) {
   const router = useRouter();
-  const chartData = data.map(toChart);
-  const maxCrashes = Math.max(...data.map((d) => d.crashes), 1);
-  const maxRequests = Math.max(...data.map((d) => d.requests), 1);
-  const yMax = Math.ceil(maxCrashes * 1.1);
-  const yMin = -Math.ceil(maxRequests * 1.1);
+  const minWidth = data.length * 36;
 
-  function handleClick(entry: { slug?: string | null }) {
-    if (entry?.slug) router.push(`/intersections/${entry.slug}`);
+  function handleClick(e: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const slug = (e as any)?.activePayload?.[0]?.payload?.slug;
+    if (slug) router.push(`/intersections/${slug}`);
   }
 
   return (
-    <div className="w-full bg-white border border-stone-200 rounded-xl p-4 overflow-x-auto">
-      <div style={{ minWidth: data.length * 36 }}>
-        <ResponsiveContainer width="100%" height={420}>
-          <ComposedChart
-            data={chartData}
-            margin={{ top: 8, right: 8, bottom: 60, left: 28 }}
-            onClick={(e) => {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const payload = (e as any)?.activePayload?.[0]?.payload;
-              if (payload) handleClick(payload);
-            }}
-            style={{ cursor: 'pointer' }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
-            <ReferenceLine y={0} stroke="#78716c" strokeWidth={1.5} />
-            <XAxis
-              dataKey="name"
-              angle={-55}
-              textAnchor="end"
-              tick={{ fontSize: 10, fill: '#78716c' }}
-              interval={0}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              domain={[yMin, yMax]}
-              tick={{ fontSize: 10, fill: '#78716c' }}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(v) => String(Math.abs(v))}
-            />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f5f5f4' }} />
-            <Bar dataKey="crashes" maxBarSize={20} radius={[3, 3, 0, 0]}>
-              {chartData.map((entry, i) => (
-                <Cell key={i} fill={entry.crashes > 0 ? '#f87171' : '#fecaca'} />
-              ))}
-            </Bar>
-            <Bar dataKey="requestsNeg" maxBarSize={20} radius={[0, 0, 3, 3]}>
-              {chartData.map((entry, i) => (
-                <Cell key={i} fill={entry.requestsNeg < 0 ? '#60a5fa' : '#bfdbfe'} />
-              ))}
-            </Bar>
-          </ComposedChart>
-        </ResponsiveContainer>
+    <div className="space-y-3">
+      {/* Crashes */}
+      <div className="bg-white border border-stone-200 rounded-xl p-4">
+        <p className="text-xs font-semibold text-red-500 uppercase tracking-wide mb-3">Injury Crashes</p>
+        <div className="overflow-x-auto">
+          <div style={{ minWidth }}>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={data} margin={MARGIN} syncId={SYNC_ID} onClick={handleClick} style={{ cursor: 'pointer' }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
+                <XAxis dataKey="name" hide />
+                <YAxis tick={{ fontSize: 10, fill: '#78716c' }} tickLine={false} axisLine={false} width={24} />
+                <Tooltip content={<CrashTooltip />} cursor={{ fill: '#fef2f2' }} />
+                <Bar dataKey="crashes" maxBarSize={BAR_SIZE} radius={[3, 3, 0, 0]}>
+                  {data.map((d, i) => (
+                    <Cell key={i} fill={d.crashes > 0 ? '#f87171' : '#fecaca'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* 311 Reports */}
+      <div className="bg-white border border-stone-200 rounded-xl p-4">
+        <p className="text-xs font-semibold text-blue-500 uppercase tracking-wide mb-3">311 Reports</p>
+        <div className="overflow-x-auto">
+          <div style={{ minWidth }}>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={data} margin={MARGIN_BOTTOM} syncId={SYNC_ID} onClick={handleClick} style={{ cursor: 'pointer' }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  angle={-55}
+                  textAnchor="end"
+                  tick={{ fontSize: 10, fill: '#78716c' }}
+                  interval={0}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis tick={{ fontSize: 10, fill: '#78716c' }} tickLine={false} axisLine={false} width={24} />
+                <Tooltip content={<RequestTooltip />} cursor={{ fill: '#eff6ff' }} />
+                <Bar dataKey="requests" maxBarSize={BAR_SIZE} radius={[3, 3, 0, 0]}>
+                  {data.map((d, i) => (
+                    <Cell key={i} fill={d.requests > 0 ? '#60a5fa' : '#bfdbfe'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
     </div>
   );

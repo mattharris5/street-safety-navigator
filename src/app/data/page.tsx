@@ -69,17 +69,6 @@ export default async function DataPage() {
       </div>
 
       <CorridorChart data={chartData} />
-
-      <div className="mt-6 flex items-center gap-6 text-xs text-stone-400">
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-red-400 inline-block" />
-          Injury crashes (above)
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-blue-400 inline-block" />
-          311 reports (below)
-        </span>
-      </div>
     </div>
   );
 }

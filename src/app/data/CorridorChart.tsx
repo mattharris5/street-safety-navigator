@@ -62,10 +62,9 @@ export default function CorridorChart({ data }: Props) {
   const router = useRouter();
   const minWidth = data.length * 36;
 
-  function handleClick(e: unknown) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const slug = (e as any)?.activePayload?.[0]?.payload?.slug;
-    if (slug) router.push(`/intersections/${slug}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function handleBarClick(entry: any) {
+    if (entry?.slug) router.push(`/intersections/${entry.slug}`);
   }
 
   return (
@@ -76,12 +75,12 @@ export default function CorridorChart({ data }: Props) {
         <div className="overflow-x-auto">
           <div style={{ minWidth }}>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={data} margin={MARGIN} syncId={SYNC_ID} onClick={handleClick} style={{ cursor: 'pointer' }}>
+              <BarChart data={data} margin={MARGIN} syncId={SYNC_ID}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
                 <XAxis dataKey="name" hide />
                 <YAxis tick={{ fontSize: 10, fill: '#78716c' }} tickLine={false} axisLine={false} width={24} />
                 <Tooltip content={<CrashTooltip />} cursor={{ fill: '#fef2f2' }} />
-                <Bar dataKey="crashes" maxBarSize={BAR_SIZE} radius={[3, 3, 0, 0]}>
+                <Bar dataKey="crashes" maxBarSize={BAR_SIZE} radius={[3, 3, 0, 0]} onClick={handleBarClick} cursor="pointer">
                   {data.map((d, i) => (
                     <Cell key={i} fill={d.crashes > 0 ? '#f87171' : '#fecaca'} />
                   ))}
@@ -98,7 +97,7 @@ export default function CorridorChart({ data }: Props) {
         <div className="overflow-x-auto">
           <div style={{ minWidth }}>
             <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={data} margin={MARGIN_BOTTOM} syncId={SYNC_ID} onClick={handleClick} style={{ cursor: 'pointer' }}>
+              <BarChart data={data} margin={MARGIN_BOTTOM} syncId={SYNC_ID}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
                 <XAxis
                   dataKey="name"
@@ -111,7 +110,7 @@ export default function CorridorChart({ data }: Props) {
                 />
                 <YAxis tick={{ fontSize: 10, fill: '#78716c' }} tickLine={false} axisLine={false} width={24} />
                 <Tooltip content={<RequestTooltip />} cursor={{ fill: '#eff6ff' }} />
-                <Bar dataKey="requests" maxBarSize={BAR_SIZE} radius={[3, 3, 0, 0]}>
+                <Bar dataKey="requests" maxBarSize={BAR_SIZE} radius={[3, 3, 0, 0]} onClick={handleBarClick} cursor="pointer">
                   {data.map((d, i) => (
                     <Cell key={i} fill={d.requests > 0 ? '#60a5fa' : '#bfdbfe'} />
                   ))}

@@ -12,7 +12,6 @@ import ProjectMarker from './ProjectMarker';
 import IncidentDot from './IncidentDot';
 import IntersectionMarker from './IntersectionMarker';
 import DetailPanel from './DetailPanel';
-import Header from './Header';
 import ViewToggle from './ViewToggle';
 import MiniMap from './MiniMap';
 import FilterBar from './FilterBar';
@@ -197,9 +196,7 @@ export default function StreetExplorer({ cortlandGeoJSON, intersections }: Stree
           ))}
       </MapView>
 
-      <Header projectCount={localProjects.length} />
-
-      <div className="absolute top-16 left-4 right-4 z-10 flex items-center justify-between gap-3 flex-wrap">
+      <div className="absolute top-2 left-4 right-4 z-10 flex items-center justify-between gap-3 flex-wrap">
         <FilterBar filters={filters} onChange={setFilters} />
         <div className="flex items-center gap-2 ml-auto">
           <MiniMap progress={progress} intersections={intersections} />
@@ -208,14 +205,14 @@ export default function StreetExplorer({ cortlandGeoJSON, intersections }: Stree
       </div>
 
       {editMode ? (
-        <div className="absolute top-28 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
           <div className="bg-green-700/90 text-white text-[11px] font-medium px-3 py-1 rounded-full
                           backdrop-blur-sm whitespace-nowrap shadow-sm tracking-wide">
             Click map to add pin · Drag pins to reposition
           </div>
         </div>
       ) : currentBlock && (
-        <div className="absolute top-28 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
           <div className="bg-slate-900/75 text-white text-[11px] font-medium px-3 py-1 rounded-full
                           backdrop-blur-sm whitespace-nowrap shadow-sm tracking-wide">
             {currentBlock}

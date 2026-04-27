@@ -25,10 +25,16 @@ async function getData() {
   return { intersections: intRows ?? [], projectsBySlug };
 }
 
-const STATUS_DOT: Record<ProjectStatus, string> = {
-  installed: 'bg-green-500',
-  proposed: 'bg-amber-400',
-  idea: 'bg-blue-400',
+const STATUS_TAG: Record<ProjectStatus, string> = {
+  installed: 'bg-green-100 text-green-800',
+  proposed: 'bg-amber-100 text-amber-800',
+  idea: 'bg-blue-100 text-blue-700',
+};
+
+const STATUS_LABEL_SHORT: Record<ProjectStatus, string> = {
+  installed: 'installed',
+  proposed: 'proposed',
+  idea: 'idea',
 };
 
 export default async function IntersectionsPage() {
@@ -66,14 +72,19 @@ export default async function IntersectionsPage() {
                 )}
               </div>
               {projects.length > 0 && (
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {projects.map((p, i) => (
-                    <span
-                      key={i}
-                      className={`w-2 h-2 rounded-full ${STATUS_DOT[p.status]}`}
-                      title={p.status}
-                    />
-                  ))}
+                <div className="flex items-center gap-1 flex-shrink-0 flex-wrap justify-end">
+                  {(['installed', 'proposed', 'idea'] as ProjectStatus[]).map((status) => {
+                    const count = projects.filter((p) => p.status === status).length;
+                    if (!count) return null;
+                    return (
+                      <span
+                        key={status}
+                        className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${STATUS_TAG[status]}`}
+                      >
+                        {count} {STATUS_LABEL_SHORT[status]}
+                      </span>
+                    );
+                  })}
                 </div>
               )}
               <span className="text-stone-400 text-sm group-hover:text-green-700 transition-colors flex-shrink-0">→</span>
@@ -82,11 +93,6 @@ export default async function IntersectionsPage() {
         })}
       </div>
 
-      <div className="mt-6 flex items-center gap-5 text-xs text-stone-400">
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Built</span>
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> In progress</span>
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> Idea</span>
-      </div>
     </div>
   );
 }

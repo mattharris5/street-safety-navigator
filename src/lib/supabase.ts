@@ -14,6 +14,7 @@ export type ProjectRow = {
   links: { label: string; url: string }[];
   date: string | null;
   tags: string[];
+  sponsor: string | null;
 };
 
 export const BUCKET = 'project-images';

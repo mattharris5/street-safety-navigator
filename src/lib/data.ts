@@ -25,6 +25,7 @@ export async function getProjects(): Promise<Project[]> {
     links: row.links ?? [],
     ...(row.date && { date: row.date }),
     tags: row.tags ?? [],
+    ...(row.sponsor && { sponsor: row.sponsor }),
   }));
 }
 

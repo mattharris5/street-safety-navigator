@@ -3,28 +3,29 @@
 import { useState } from 'react';
 import { TYPE_LABELS, STATUS_LABELS } from '@/lib/constants';
 import ImageUploader from '@/components/ImageUploader';
-import type { Project, ProjectType, ProjectStatus, StreetSide } from '@/lib/types';
+import type { Project, ProjectType, ProjectStatus, StreetSide, Intersection } from '@/lib/types';
 
 interface ProjectFormProps {
   project?: Project;
   initialValues?: { lng?: number; lat?: number };
+  intersections?: Intersection[];
   adminToken: string;
   onSave: (project: Project) => void;
   onCancel: () => void;
 }
 
 const PROJECT_TYPES: ProjectType[] = [
-  'planter', 'street-mural', 'flex-post', 'daylighting',
-  'crosswalk', 'speed-bump', 'curb-extension', 'signal', 'other',
+  'painted-safety-zone', 'planter', 'pedestrian-island', 'street-mural',
+  'flex-post', 'daylighting', 'crosswalk', 'speed-bump', 'curb-extension',
+  'signal', 'bike-share', 'bus-stop', 'other',
 ];
 const STATUSES: ProjectStatus[] = ['installed', 'proposed', 'idea'];
 const SIDES: StreetSide[] = ['north', 'south', 'center', 'both'];
 
-// Default coordinates — center of Cortland Ave
 const DEFAULT_LNG = -122.39987;
 const DEFAULT_LAT = 37.73943;
 
-export default function ProjectForm({ project, initialValues, adminToken, onSave, onCancel }: ProjectFormProps) {
+export default function ProjectForm({ project, initialValues, intersections = [], adminToken, onSave, onCancel }: ProjectFormProps) {
   const [form, setForm] = useState<Omit<Project, 'id'>>({
     name: project?.name ?? '',
     type: project?.type ?? 'daylighting',
@@ -38,6 +39,7 @@ export default function ProjectForm({ project, initialValues, adminToken, onSave
     links: project?.links ?? [],
     date: project?.date ?? new Date().toISOString().split('T')[0],
     tags: project?.tags ?? [],
+    sponsor: project?.sponsor ?? '',
   });
 
   const [tagInput, setTagInput] = useState('');
@@ -46,6 +48,15 @@ export default function ProjectForm({ project, initialValues, adminToken, onSave
 
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  function handleIntersectionSelect(e: React.ChangeEvent<HTMLSelectElement>) {
+    const slug = e.target.value;
+    if (!slug) return;
+    const int = intersections.find((i) => i.slug === slug);
+    if (int) {
+      setForm((f) => ({ ...f, lng: int.lng, lat: int.lat }));
+    }
+  }
 
   function addTag() {
     const t = tagInput.trim().toLowerCase().replace(/\s+/g, '-');
@@ -63,8 +74,18 @@ export default function ProjectForm({ project, initialValues, adminToken, onSave
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onSave({ ...form, id: project?.id ?? `proj-${Date.now()}` });
+    const toSave: Project = {
+      ...form,
+      id: project?.id ?? `proj-${Date.now()}`,
+    };
+    if (!toSave.sponsor) delete toSave.sponsor;
+    onSave(toSave);
   }
+
+  // Find current intersection based on coordinates
+  const currentIntSlug = intersections.find(
+    (i) => Math.abs(i.lng - form.lng) < 0.0001 && Math.abs(i.lat - form.lat) < 0.0001
+  )?.slug ?? '';
 
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 p-6 max-w-2xl">
@@ -126,9 +147,27 @@ export default function ProjectForm({ project, initialValues, adminToken, onSave
           />
         </div>
 
+        {/* Intersection */}
+        {intersections.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Intersection</label>
+            <select
+              value={currentIntSlug}
+              onChange={handleIntersectionSelect}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="">— Mid-block or unassigned —</option>
+              {intersections.map((i) => (
+                <option key={i.slug} value={i.slug ?? ''}>{i.name}</option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-400 mt-1">Selecting an intersection auto-fills coordinates below.</p>
+          </div>
+        )}
+
         {/* Location */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Location (Coordinates)</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Coordinates</label>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-slate-400">Longitude</label>
@@ -152,7 +191,7 @@ export default function ProjectForm({ project, initialValues, adminToken, onSave
             </div>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Tip: Right-click any location on{' '}
+            Or right-click on{' '}
             <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="underline">Google Maps</a>{' '}
             to copy coordinates.
           </p>
@@ -182,6 +221,18 @@ export default function ProjectForm({ project, initialValues, adminToken, onSave
               placeholder="e.g. 10"
             />
           </div>
+        </div>
+
+        {/* Sponsor */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Sponsoring Organization</label>
+          <input
+            type="text"
+            value={form.sponsor ?? ''}
+            onChange={(e) => set('sponsor', e.target.value)}
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            placeholder="e.g. Civic Joy + Greening Projects"
+          />
         </div>
 
         {/* Date */}
@@ -268,7 +319,7 @@ export default function ProjectForm({ project, initialValues, adminToken, onSave
       </div>
 
         {/* Photos */}
-        <div>
+        <div className="mt-5">
           <label className="block text-sm font-medium text-slate-700 mb-2">Photos</label>
           <ImageUploader
             images={form.images ?? []}

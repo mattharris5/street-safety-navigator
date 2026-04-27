@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Leaf, Palette, Triangle, Eye, Footprints,
   MoveHorizontal, CornerDownRight, TrafficCone, MapPin,
+  PaintBucket, PersonStanding, Bike, Bus,
 } from 'lucide-react';
 import type { ProjectStatus, ProjectType } from './types';
 
@@ -63,6 +64,10 @@ export const TYPE_LABELS: Record<ProjectType, string> = {
   'speed-bump': 'Speed Cushion',
   'curb-extension': 'Curb Extension',
   signal: 'Signal Upgrade',
+  'painted-safety-zone': 'Painted Safety Zone',
+  'pedestrian-island': 'Pedestrian Island',
+  'bike-share': 'Bike Share',
+  'bus-stop': 'Bus Stop',
   other: 'Other',
 };
 
@@ -75,6 +80,10 @@ export const TYPE_ICONS: Record<ProjectType, LucideIcon> = {
   'speed-bump': MoveHorizontal,
   'curb-extension': CornerDownRight,
   signal: TrafficCone,
+  'painted-safety-zone': PaintBucket,
+  'pedestrian-island': PersonStanding,
+  'bike-share': Bike,
+  'bus-stop': Bus,
   other: MapPin,
 };
 

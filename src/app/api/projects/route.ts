@@ -18,6 +18,7 @@ function toRow(p: Project): ProjectRow {
     links: p.links ?? [],
     date: p.date ?? null,
     tags: p.tags ?? [],
+    sponsor: p.sponsor ?? null,
   };
 }
 
@@ -36,6 +37,7 @@ function fromRow(row: ProjectRow): Project {
     links: row.links ?? [],
     ...(row.date && { date: row.date }),
     tags: row.tags ?? [],
+    ...(row.sponsor && { sponsor: row.sponsor }),
   };
 }
 

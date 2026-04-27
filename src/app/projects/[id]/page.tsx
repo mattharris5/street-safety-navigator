@@ -125,8 +125,14 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           </h1>
 
           {project.description && (
-            <p className="text-stone-600 leading-relaxed text-[15px] mb-8">
+            <p className="text-stone-600 leading-relaxed text-[15px] mb-4">
               {project.description}
+            </p>
+          )}
+
+          {project.sponsor && (
+            <p className="text-sm text-stone-500 mb-8">
+              Sponsored by <span className="font-medium text-stone-700">{project.sponsor}</span>
             </p>
           )}
 

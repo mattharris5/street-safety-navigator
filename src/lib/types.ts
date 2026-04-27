@@ -7,6 +7,10 @@ export type ProjectType =
   | 'speed-bump'
   | 'curb-extension'
   | 'signal'
+  | 'painted-safety-zone'
+  | 'pedestrian-island'
+  | 'bike-share'
+  | 'bus-stop'
   | 'other';
 
 export type ProjectStatus = 'installed' | 'proposed' | 'idea';
@@ -27,6 +31,7 @@ export interface Project {
   links?: { label: string; url: string }[];
   date?: string;
   tags?: string[];
+  sponsor?: string;
 }
 
 export type IncidentSeverity = 'fatal' | 'severe' | 'moderate' | 'minor';

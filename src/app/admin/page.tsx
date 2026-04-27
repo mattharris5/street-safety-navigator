@@ -1,18 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import ProjectList from '@/components/admin/ProjectList';
 import ProjectForm from '@/components/admin/ProjectForm';
-import type { Project } from '@/lib/types';
-import { BRAND } from '@/lib/constants';
+import type { Project, Intersection } from '@/lib/types';
 import type { Session } from '@supabase/supabase-js';
 
 export default function AdminPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('edit');
+
   const [session, setSession] = useState<Session | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [intersections, setIntersections] = useState<Intersection[]>([]);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -28,8 +31,19 @@ export default function AdminPage() {
       if (!s) router.replace('/login?redirect=/admin');
       else setSession(s);
     });
+
+    fetch('/api/intersections').then((r) => r.ok ? r.json() : []).then(setIntersections);
+
     return () => subscription.unsubscribe();
   }, [router]);
+
+  // Auto-open edit form when ?edit=id is in URL
+  useEffect(() => {
+    if (editId && projects.length > 0 && !editingProject && !showForm) {
+      const p = projects.find((proj) => proj.id === editId);
+      if (p) setEditingProject(p);
+    }
+  }, [editId, projects]);
 
   async function fetchProjects(token: string) {
     setLoading(true);
@@ -68,22 +82,6 @@ export default function AdminPage() {
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-green-700 text-white flex items-center justify-center font-bold text-sm">S</div>
-          <div>
-            <h1 className="font-semibold text-slate-800 text-sm">{BRAND.name} — Admin</h1>
-            <p className="text-xs text-slate-500">Manage safety improvement projects</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <a href="/" className="text-xs text-slate-500 hover:text-slate-700">← View map</a>
-          <button onClick={handleSignOut} className="text-xs text-slate-400 hover:text-slate-600">
-            Sign out
-          </button>
-        </div>
-      </header>
-
       <main className="max-w-5xl mx-auto px-6 py-8">
         {showForm || editingProject ? (
           <div>
@@ -95,6 +93,7 @@ export default function AdminPage() {
             </button>
             <ProjectForm
               project={editingProject ?? undefined}
+              intersections={intersections}
               adminToken={session.access_token}
               onSave={handleSave}
               onCancel={() => { setShowForm(false); setEditingProject(null); }}
@@ -106,12 +105,20 @@ export default function AdminPage() {
               <h2 className="text-lg font-semibold text-slate-800">
                 Projects <span className="text-slate-400 font-normal text-base">({projects.length})</span>
               </h2>
-              <button
-                onClick={() => setShowForm(true)}
-                className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 transition-colors"
-              >
-                + Add Project
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSignOut}
+                  className="text-xs text-slate-400 hover:text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors"
+                >
+                  Sign out
+                </button>
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 transition-colors"
+                >
+                  + Add Project
+                </button>
+              </div>
             </div>
             {loading ? (
               <div className="text-center py-12 text-slate-400">Loading…</div>

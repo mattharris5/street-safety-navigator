@@ -124,9 +124,17 @@ function ProjectDetail({ project }: { project: Project }) {
   const statusColor = STATUS_COLORS[project.status];
   const statusBg = STATUS_BG_COLORS[project.status];
   const TypeIcon = TYPE_ICONS[project.type];
+  const heroImage = project.images?.[0];
 
   return (
     <div>
+      {heroImage && (
+        <div className="relative -mx-5 mb-4" style={{ height: 200 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={heroImage} alt={project.name} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+        </div>
+      )}
       <div className="flex items-start gap-3 mb-3">
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"

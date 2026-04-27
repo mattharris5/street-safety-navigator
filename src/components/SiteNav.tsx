@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: '/', label: 'Map' },
   { href: '/projects', label: 'Master Plan' },
   { href: '/intersections', label: 'Intersections' },
+  { href: '/data', label: 'Data' },
 ];
 
 export default function SiteNav() {

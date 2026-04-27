@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { extractLineString, progressAlongLine } from '@/lib/geo';
 import { useStreetScroll } from '@/hooks/useStreetScroll';
 import { useProjects } from '@/hooks/useProjects';
@@ -26,6 +26,7 @@ interface StreetExplorerProps {
 
 export default function StreetExplorer({ cortlandGeoJSON, intersections }: StreetExplorerProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [viewMode, setViewMode] = useState<ViewMode>('map');
   const [selectedItem, setSelectedItem] = useState<
     { type: 'project'; data: Project } | { type: 'incident'; data: Incident } | null
@@ -62,6 +63,14 @@ export default function StreetExplorer({ cortlandGeoJSON, intersections }: Stree
   useEffect(() => {
     if (!editMode) setLocalProjects(fetchedProjects);
   }, [fetchedProjects, editMode]);
+
+  // Auto-select a project when ?project=id is in the URL
+  const deepLinkId = searchParams.get('project');
+  useEffect(() => {
+    if (!deepLinkId || !localProjects.length) return;
+    const found = localProjects.find((p) => p.id === deepLinkId);
+    if (found) setSelectedItem({ type: 'project', data: found });
+  }, [deepLinkId, localProjects]);
 
   // Hydrate Supabase session token for API calls
   useEffect(() => {

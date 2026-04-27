@@ -6,9 +6,9 @@ const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
 
 export async function POST(req: NextRequest) {
-  // Auth check — same mechanism as the rest of the API
   if (!await isAdmin(req)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    console.error('Upload auth failed — token present:', !!req.headers.get('x-admin-token'));
+    return NextResponse.json({ error: 'Unauthorized — please sign in again' }, { status: 401 });
   }
 
   const formData = await req.formData();
@@ -36,8 +36,8 @@ export async function POST(req: NextRequest) {
     .upload(path, arrayBuffer, { contentType: file.type, upsert: false });
 
   if (error) {
-    console.error('Supabase upload error:', error);
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+    console.error('Supabase upload error:', error.message, error);
+    return NextResponse.json({ error: `Storage error: ${error.message}` }, { status: 500 });
   }
 
   const { data } = getSupabase().storage.from(BUCKET).getPublicUrl(path);

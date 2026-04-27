@@ -17,7 +17,7 @@ async function getData(datasf_id: string) {
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value) return null;
   return (
-    <div className="flex gap-3 py-2 border-b border-stone-100 last:border-0">
+    <div className="flex gap-3 px-4 py-2 border-b border-stone-100 last:border-0">
       <span className="text-xs text-stone-400 w-40 flex-shrink-0 pt-0.5">{label}</span>
       <span className="text-sm text-stone-700">{value}</span>
     </div>
@@ -28,7 +28,7 @@ function DateRow({ label, value }: { label: string; value: string | null | undef
   if (!value) return null;
   const d = new Date(value);
   return (
-    <div className="flex gap-3 py-2 border-b border-stone-100 last:border-0">
+    <div className="flex gap-3 px-4 py-2 border-b border-stone-100 last:border-0">
       <span className="text-xs text-stone-400 w-40 flex-shrink-0 pt-0.5">{label}</span>
       <span className="text-sm text-stone-700 flex items-center gap-1.5">
         <Calendar size={12} className="text-stone-400" />
@@ -139,7 +139,7 @@ export default async function ServiceRequestDetailPage({ params }: { params: Pro
             {typeof r.address === 'string' && <Row label="Address" value={r.address} />}
             {typeof r.street === 'string' && !r.address && <Row label="Street" value={r.street} />}
             <Row label="Neighborhood" value={typeof r.analysis_neighborhood === 'string' ? r.analysis_neighborhood : null} />
-            <div className="flex gap-3 py-2">
+            <div className="flex gap-3 px-4 py-2">
               <span className="text-xs text-stone-400 w-40 flex-shrink-0 pt-0.5">Coordinates</span>
               <span className="text-sm text-stone-700">
                 {sr.lat?.toFixed(5)}, {sr.lng?.toFixed(5)}

@@ -107,6 +107,25 @@ export function extractIntersections(geojson: GeoJSON.FeatureCollection) {
 }
 
 /**
+ * Returns the nearest Intersection object within radiusMeters, or null.
+ */
+export function nearestIntersection(
+  lng: number,
+  lat: number,
+  intersections: Intersection[],
+  radiusMeters = 150
+): Intersection | null {
+  const pt = point([lng, lat]);
+  let best: Intersection | null = null;
+  let bestDist = Infinity;
+  for (const int of intersections) {
+    const d = distance(pt, point([int.lng, int.lat]), { units: 'meters' });
+    if (d < radiusMeters && d < bestDist) { bestDist = d; best = int; }
+  }
+  return best;
+}
+
+/**
  * Returns the name of the nearest intersection within radiusMeters, or null.
  */
 export function nearestIntersectionName(

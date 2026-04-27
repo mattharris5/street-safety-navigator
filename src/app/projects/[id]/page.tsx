@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, ExternalLink, MapPin, Calendar, Ruler } from 'lucide-react';
+import { ArrowLeft, ExternalLink, MapPin, Calendar, Ruler, Pencil } from 'lucide-react';
 import { getProjects, getIntersections } from '@/lib/data';
 import { STATUS_COLORS, STATUS_LABELS, TYPE_ICONS, TYPE_LABELS } from '@/lib/constants';
 import { nearestIntersectionName } from '@/lib/geo';
+import { createClient as createServerClient } from '@/utils/supabase/server';
 
 export const revalidate = 30;
 
@@ -13,8 +14,14 @@ export async function generateStaticParams() {
   return projects.map((p) => ({ id: p.id }));
 }
 
+const ADMIN_EMAILS = (process.env.ADMIN_EMAIL ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const supabase = await createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isAdmin = user?.email ? ADMIN_EMAILS.includes(user.email.toLowerCase()) : false;
+
   const [projects, intersections] = await Promise.all([getProjects(), getIntersections()]);
   const project = projects.find((p) => p.id === id);
   if (!project) notFound();
@@ -29,12 +36,21 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-20">
       {/* Breadcrumb */}
       <div className="py-4 flex items-center gap-2 text-sm text-stone-400">
-        <Link href="/projects" className="flex items-center gap-1 hover:text-stone-700 transition-colors">
+        <Link href="/" className="flex items-center gap-1 hover:text-stone-700 transition-colors">
           <ArrowLeft size={14} />
-          Projects
+          Master Plan
         </Link>
         <span>/</span>
-        <span className="text-stone-600 truncate">{project.name}</span>
+        <span className="text-stone-600 truncate flex-1">{project.name}</span>
+        {isAdmin && (
+          <Link
+            href={`/admin?edit=${project.id}`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 text-xs font-medium transition-colors"
+          >
+            <Pencil size={12} />
+            Edit
+          </Link>
+        )}
       </div>
 
       {/* Hero image */}

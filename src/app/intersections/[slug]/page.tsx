@@ -70,9 +70,38 @@ export default async function IntersectionPage({ params }: { params: Promise<{ s
         </div>
       )}
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left: crash + 311 data */}
-        <div className="lg:col-span-2 space-y-8">
+      <div className="space-y-8">
+        {/* Projects — prominent, full width */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-stone-800">
+              Projects
+              <span className="ml-2 text-stone-400 font-normal text-sm">({nearbyProjects.length})</span>
+            </h2>
+            <Link href={`/map?project=${slug}`} className="text-sm text-green-800 hover:text-green-900 font-medium">
+              View on map →
+            </Link>
+          </div>
+          {nearbyProjects.length === 0 ? (
+            <p className="text-stone-400 text-sm">No projects near this intersection yet.</p>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {nearbyProjects.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/projects/${p.id}`}
+                  className="block bg-white border border-stone-200 rounded-xl p-4 hover:border-green-300 hover:shadow-[var(--shadow-card)] transition-all"
+                >
+                  <p className="text-sm font-semibold text-stone-800 leading-snug mb-1">{p.name}</p>
+                  <p className="text-xs text-stone-400 capitalize">{p.status} · {p.type.replace(/-/g, ' ')}</p>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Crashes + 311 side by side */}
+        <div className="grid lg:grid-cols-2 gap-6">
           {/* Crashes */}
           <section>
             <div className="flex items-center gap-2 mb-4">
@@ -152,38 +181,6 @@ export default async function IntersectionPage({ params }: { params: Promise<{ s
               </div>
             )}
           </section>
-        </div>
-
-        {/* Right: nearby projects */}
-        <div>
-          <h2 className="font-semibold text-stone-800 mb-4">
-            Nearby Projects
-            <span className="ml-2 text-stone-400 font-normal text-sm">({nearbyProjects.length})</span>
-          </h2>
-          {nearbyProjects.length === 0 ? (
-            <p className="text-stone-400 text-sm">No projects near this intersection yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {nearbyProjects.map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/projects/${p.id}`}
-                  className="block bg-white border border-stone-200 rounded-lg p-3 hover:border-green-300 transition-colors"
-                >
-                  <p className="text-sm font-medium text-stone-800 leading-snug">{p.name}</p>
-                  <p className="text-xs text-stone-400 mt-0.5 capitalize">{p.status} · {p.type.replace('-', ' ')}</p>
-                </Link>
-              ))}
-            </div>
-          )}
-          <div className="mt-4">
-            <Link
-              href={`/?intersection=${slug}`}
-              className="text-sm text-green-800 hover:text-green-900 font-medium"
-            >
-              View on map →
-            </Link>
-          </div>
         </div>
       </div>
     </div>

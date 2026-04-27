@@ -28,7 +28,7 @@ function severityStyle(sev: string | null) {
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value || value === 'Not Stated' || value === 'No Pedestrian Involved') return null;
   return (
-    <div className="flex gap-3 py-2 border-b border-stone-100 last:border-0">
+    <div className="flex gap-3 px-4 py-2 border-b border-stone-100 last:border-0">
       <span className="text-xs text-stone-400 w-40 flex-shrink-0 pt-0.5">{label}</span>
       <span className="text-sm text-stone-700">{value}</span>
     </div>
@@ -162,7 +162,7 @@ export default async function CrashDetailPage({ params }: { params: Promise<{ id
             <Row label="Primary street" value={r.primary_rd} />
             <Row label="Cross street" value={r.secondary_rd} />
             <Row label="Geocode source" value={r.geocode_source?.replace(/-/g, ' ')} />
-            <div className="flex gap-3 py-2">
+            <div className="flex gap-3 px-4 py-2">
               <span className="text-xs text-stone-400 w-40 flex-shrink-0 pt-0.5">Coordinates</span>
               <span className="text-sm text-stone-700">
                 {crash.lat?.toFixed(5)}, {crash.lng?.toFixed(5)}

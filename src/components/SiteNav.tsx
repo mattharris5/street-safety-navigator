@@ -7,8 +7,8 @@ import { Menu, X, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const NAV_LINKS = [
-  { href: '/', label: 'Map' },
-  { href: '/projects', label: 'Master Plan' },
+  { href: '/', label: 'Master Plan' },
+  { href: '/map', label: 'Map' },
   { href: '/intersections', label: 'Intersections' },
   { href: '/data', label: 'Data' },
 ];

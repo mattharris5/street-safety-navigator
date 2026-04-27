@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, AlertTriangle, MessageSquare, ChevronRight } from 'lucide-react';
+import { MapPin, AlertTriangle, MessageSquare, ChevronRight, ChevronLeft } from 'lucide-react';
 import { getSupabase } from '@/lib/supabase';
 import { getProjects, getIntersections } from '@/lib/data';
 import { nearestIntersection } from '@/lib/geo';
@@ -26,7 +26,12 @@ async function getData(slug: string) {
     return nearest?.slug === slug;
   });
 
-  return { int, crashes: crashes ?? [], requests: requests ?? [], nearbyProjects };
+  // Prev/next by sort_order for corridor navigation
+  const idx = allIntersections.findIndex((i) => i.slug === slug);
+  const prev = idx > 0 ? allIntersections[idx - 1] : null;
+  const next = idx < allIntersections.length - 1 ? allIntersections[idx + 1] : null;
+
+  return { int, crashes: crashes ?? [], requests: requests ?? [], nearbyProjects, prev, next };
 }
 
 export default async function IntersectionPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -34,7 +39,7 @@ export default async function IntersectionPage({ params }: { params: Promise<{ s
   const result = await getData(slug);
   if (!result) notFound();
 
-  const { int, crashes, requests, nearbyProjects } = result;
+  const { int, crashes, requests, nearbyProjects, prev, next } = result;
 
   const severityCounts = crashes.reduce((acc: Record<string, number>, c) => {
     if (c.severity) acc[c.severity] = (acc[c.severity] ?? 0) + 1;
@@ -42,7 +47,34 @@ export default async function IntersectionPage({ params }: { params: Promise<{ s
   }, {});
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-10">
+    <div className="relative max-w-4xl mx-auto px-6 py-10">
+      {/* Corridor navigation arrows — fixed to viewport sides */}
+      {prev?.slug && (
+        <Link
+          href={`/intersections/${prev.slug}`}
+          className="fixed left-2 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1
+                     bg-white border border-stone-200 rounded-xl px-2 py-4 shadow-md
+                     hover:border-green-300 hover:shadow-lg transition-all group max-w-[72px]"
+        >
+          <ChevronLeft size={20} className="text-stone-400 group-hover:text-green-700 transition-colors" />
+          <span className="text-[10px] text-stone-400 group-hover:text-green-700 text-center leading-tight transition-colors">
+            {prev.shortName}
+          </span>
+        </Link>
+      )}
+      {next?.slug && (
+        <Link
+          href={`/intersections/${next.slug}`}
+          className="fixed right-2 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1
+                     bg-white border border-stone-200 rounded-xl px-2 py-4 shadow-md
+                     hover:border-green-300 hover:shadow-lg transition-all group max-w-[72px]"
+        >
+          <ChevronRight size={20} className="text-stone-400 group-hover:text-green-700 transition-colors" />
+          <span className="text-[10px] text-stone-400 group-hover:text-green-700 text-center leading-tight transition-colors">
+            {next.shortName}
+          </span>
+        </Link>
+      )}
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-stone-400 mb-6">
         <Link href="/intersections" className="hover:text-stone-600">Intersections</Link>

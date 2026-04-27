@@ -36,9 +36,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-20">
       {/* Breadcrumb */}
       <div className="py-4 flex items-center gap-2 text-sm text-stone-400">
-        <Link href="/" className="flex items-center gap-1 hover:text-stone-700 transition-colors">
+        <Link href="/projects" className="flex items-center gap-1 hover:text-stone-700 transition-colors">
           <ArrowLeft size={14} />
-          Master Plan
+          Projects
         </Link>
         <span>/</span>
         <span className="text-stone-600 truncate flex-1">{project.name}</span>

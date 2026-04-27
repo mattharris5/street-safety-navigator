@@ -8,8 +8,8 @@ import { cn } from '@/lib/cn';
 
 const NAV_LINKS = [
   { href: '/', label: 'Master Plan' },
+  { href: '/projects', label: 'Projects' },
   { href: '/map', label: 'Map' },
-  { href: '/intersections', label: 'Intersections' },
   { href: '/data', label: 'Data' },
 ];
 

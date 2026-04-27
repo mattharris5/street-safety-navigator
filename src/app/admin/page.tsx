@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import ProjectList from '@/components/admin/ProjectList';
@@ -8,7 +8,7 @@ import ProjectForm from '@/components/admin/ProjectForm';
 import type { Project, Intersection } from '@/lib/types';
 import type { Session } from '@supabase/supabase-js';
 
-export default function AdminPage() {
+function AdminPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit');
@@ -133,5 +133,13 @@ export default function AdminPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense>
+      <AdminPageInner />
+    </Suspense>
   );
 }

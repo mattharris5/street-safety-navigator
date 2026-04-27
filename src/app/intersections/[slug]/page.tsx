@@ -3,14 +3,15 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, AlertTriangle, MessageSquare, ChevronRight } from 'lucide-react';
 import { getSupabase } from '@/lib/supabase';
-import { getProjects } from '@/lib/data';
-import { nearestIntersectionName } from '@/lib/geo';
+import { getProjects, getIntersections } from '@/lib/data';
+import { nearestIntersection } from '@/lib/geo';
 
 async function getData(slug: string) {
   const supabase = getSupabase();
-  const [{ data: int }, projects] = await Promise.all([
+  const [{ data: int }, projects, allIntersections] = await Promise.all([
     supabase.from('intersections').select('*').eq('slug', slug).single(),
     getProjects(),
+    getIntersections(),
   ]);
   if (!int) return null;
 
@@ -19,9 +20,10 @@ async function getData(slug: string) {
     supabase.from('service_requests').select('*').eq('intersection_id', int.id).order('opened', { ascending: false }),
   ]);
 
+  // A project belongs here only if this is its nearest intersection across the whole corridor.
   const nearbyProjects = projects.filter((p) => {
-    const nearest = nearestIntersectionName(p.lng, p.lat, [{ name: int.name, shortName: int.short_name, lng: int.lng, lat: int.lat, order: 0 }], 200);
-    return nearest !== null;
+    const nearest = nearestIntersection(p.lng, p.lat, allIntersections, 200);
+    return nearest?.slug === slug;
   });
 
   return { int, crashes: crashes ?? [], requests: requests ?? [], nearbyProjects };

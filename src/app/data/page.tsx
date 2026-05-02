@@ -3,50 +3,14 @@ import { getIntersections } from '@/lib/data';
 import CorridorChart from './CorridorChart';
 import CrashTrendChart, { type YearPoint, type MajorIncident } from './CrashTrendChart';
 
-async function getData() {
-  const supabase = getSupabase();
-  const [intersections, { data: crashRows }, { data: srRows }, { data: trendRows }] = await Promise.all([
-    getIntersections(),
-    supabase.from('crashes').select('intersection_id').not('intersection_id', 'is', null),
-    supabase.from('service_requests').select('intersection_id').not('intersection_id', 'is', null),
-    supabase.from('crashes').select('occurred_at, severity, raw, datasf_id').not('occurred_at', 'is', null).order('occurred_at'),
-  ]);
+const ENDPOINT_IDS = new Set(['int-mission', 'int-bayshore']);
 
-  // Count per intersection
-  const crashCounts: Record<string, number> = {};
-  for (const r of crashRows ?? []) {
-    crashCounts[r.intersection_id] = (crashCounts[r.intersection_id] ?? 0) + 1;
-  }
-  const srCounts: Record<string, number> = {};
-  for (const r of srRows ?? []) {
-    srCounts[r.intersection_id] = (srCounts[r.intersection_id] ?? 0) + 1;
-  }
+type TrendRow = { occurred_at: string; severity: string; raw: Record<string, string> | null; datasf_id: string; intersection_id: string | null };
 
-  // Intersection IDs from DB
-  const { data: intRows } = await supabase
-    .from('intersections')
-    .select('id,slug')
-    .order('sort_order');
-
-  const idBySlug = Object.fromEntries((intRows ?? []).map((r) => [r.slug, r.id]));
-
-  const chartData = intersections.map((int) => {
-    const id = int.slug ? idBySlug[int.slug] : null;
-    return {
-      name: int.shortName,
-      slug: int.slug ?? null,
-      crashes: id ? (crashCounts[id] ?? 0) : 0,
-      requests: id ? (srCounts[id] ?? 0) : 0,
-    };
-  });
-
-  const totalCrashes = Object.values(crashCounts).reduce((a, b) => a + b, 0);
-  const totalRequests = Object.values(srCounts).reduce((a, b) => a + b, 0);
-
-  // Trend: group by year
+function buildTrend(rows: TrendRow[]): { trendData: YearPoint[]; majorIncidents: MajorIncident[] } {
   const yearMap: Record<number, { total: number; fatal: number; severe: number }> = {};
-  for (const r of trendRows ?? []) {
-    const year = new Date(r.occurred_at as string).getFullYear();
+  for (const r of rows) {
+    const year = new Date(r.occurred_at).getFullYear();
     if (!yearMap[year]) yearMap[year] = { total: 0, fatal: 0, severe: 0 };
     yearMap[year].total++;
     if (r.severity === 'Fatal') yearMap[year].fatal++;
@@ -60,22 +24,20 @@ async function getData() {
       const d = yearMap[y] ?? { total: 0, fatal: 0, severe: 0 };
       trendData.push({ year: y, total: d.total, fatal: d.fatal, severe: d.severe, other: d.total - d.fatal - d.severe, avg3yr: 0 });
     }
-    // 3-year centred rolling average
     trendData.forEach((d, i) => {
       const window = trendData.slice(Math.max(0, i - 1), Math.min(trendData.length, i + 2));
       d.avg3yr = window.reduce((s, w) => s + w.total, 0) / window.length;
     });
   }
 
-  // Major incidents: fatal + severe, most recent first
-  const majorIncidents: MajorIncident[] = (trendRows ?? [])
+  const majorIncidents: MajorIncident[] = rows
     .filter((r) => r.severity === 'Fatal' || r.severity === 'Severe Injury')
     .map((r) => {
       const raw = (r.raw ?? {}) as Record<string, string>;
       return {
-        datasf_id: r.datasf_id as string,
-        occurred_at: r.occurred_at as string,
-        severity: r.severity as string,
+        datasf_id: r.datasf_id,
+        occurred_at: r.occurred_at,
+        severity: r.severity,
         killed: parseInt(raw.number_killed ?? '0', 10),
         injured: parseInt(raw.number_injured ?? '0', 10),
         type: raw.type_of_collision ?? null,
@@ -85,11 +47,49 @@ async function getData() {
     })
     .sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime());
 
-  return { chartData, totalCrashes, totalRequests, trendData, majorIncidents };
+  return { trendData, majorIncidents };
+}
+
+async function getData() {
+  const supabase = getSupabase();
+  const [intersections, { data: crashRows }, { data: srRows }, { data: rawTrendRows }] = await Promise.all([
+    getIntersections(),
+    supabase.from('crashes').select('intersection_id').not('intersection_id', 'is', null),
+    supabase.from('service_requests').select('intersection_id').not('intersection_id', 'is', null),
+    supabase.from('crashes')
+      .select('occurred_at, severity, raw, datasf_id, intersection_id')
+      .not('occurred_at', 'is', null)
+      .order('occurred_at'),
+  ]);
+
+  // Per-intersection counts for the corridor chart
+  const crashCounts: Record<string, number> = {};
+  for (const r of crashRows ?? []) crashCounts[r.intersection_id] = (crashCounts[r.intersection_id] ?? 0) + 1;
+  const srCounts: Record<string, number> = {};
+  for (const r of srRows ?? []) srCounts[r.intersection_id] = (srCounts[r.intersection_id] ?? 0) + 1;
+
+  const { data: intRows } = await supabase.from('intersections').select('id,slug').order('sort_order');
+  const idBySlug = Object.fromEntries((intRows ?? []).map((r) => [r.slug, r.id]));
+
+  const chartData = intersections.map((int) => {
+    const id = int.slug ? idBySlug[int.slug] : null;
+    return { name: int.shortName, slug: int.slug ?? null, crashes: id ? (crashCounts[id] ?? 0) : 0, requests: id ? (srCounts[id] ?? 0) : 0 };
+  });
+
+  const totalCrashes = Object.values(crashCounts).reduce((a, b) => a + b, 0);
+  const totalRequests = Object.values(srCounts).reduce((a, b) => a + b, 0);
+
+  const trendRows = (rawTrendRows ?? []) as TrendRow[];
+  const coreRows = trendRows.filter((r) => !r.intersection_id || !ENDPOINT_IDS.has(r.intersection_id));
+
+  const { trendData, majorIncidents } = buildTrend(trendRows);
+  const { trendData: trendDataCore, majorIncidents: majorIncidentsCore } = buildTrend(coreRows);
+
+  return { chartData, totalCrashes, totalRequests, trendData, majorIncidents, trendDataCore, majorIncidentsCore };
 }
 
 export default async function DataPage() {
-  const { chartData, totalCrashes, totalRequests, trendData, majorIncidents } = await getData();
+  const { chartData, totalCrashes, totalRequests, trendData, majorIncidents, trendDataCore, majorIncidentsCore } = await getData();
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
@@ -114,7 +114,12 @@ export default async function DataPage() {
 
       {trendData.length > 0 && (
         <div className="mb-10">
-          <CrashTrendChart trendData={trendData} majorIncidents={majorIncidents} />
+          <CrashTrendChart
+            trendData={trendData}
+            majorIncidents={majorIncidents}
+            trendDataCore={trendDataCore}
+            majorIncidentsCore={majorIncidentsCore}
+          />
         </div>
       )}
 

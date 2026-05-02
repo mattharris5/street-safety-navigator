@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import {
   ComposedChart,
@@ -10,9 +11,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
-import { AlertTriangle, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 
 export interface YearPoint {
   year: number;
@@ -37,6 +37,8 @@ export interface MajorIncident {
 interface Props {
   trendData: YearPoint[];
   majorIncidents: MajorIncident[];
+  trendDataCore: YearPoint[];
+  majorIncidentsCore: MajorIncident[];
 }
 
 function TrendTooltip({ active, payload, label }: {
@@ -77,8 +79,12 @@ function formatDate(iso: string) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export default function CrashTrendChart({ trendData, majorIncidents }: Props) {
-  const minWidth = Math.max(trendData.length * 32, 400);
+export default function CrashTrendChart({ trendData, majorIncidents, trendDataCore, majorIncidentsCore }: Props) {
+  const [excludeEndpoints, setExcludeEndpoints] = useState(false);
+
+  const data = excludeEndpoints ? trendDataCore : trendData;
+  const incidents = excludeEndpoints ? majorIncidentsCore : majorIncidents;
+  const minWidth = Math.max(data.length * 32, 400);
 
   return (
     <div className="space-y-6">
@@ -93,11 +99,27 @@ export default function CrashTrendChart({ trendData, majorIncidents }: Props) {
               Injury crashes along Cortland corridor by year
             </p>
           </div>
-          <div className="flex items-center gap-3 text-[10px] text-stone-400 flex-wrap justify-end">
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> Fatal</span>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-orange-400 inline-block" /> Severe</span>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-300 inline-block" /> Other injury</span>
-            <span className="flex items-center gap-1"><span className="w-8 h-0.5 bg-green-700 inline-block" /> 3-yr avg</span>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-3 text-[10px] text-stone-400 flex-wrap justify-end">
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> Fatal</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-orange-400 inline-block" /> Severe</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-300 inline-block" /> Other injury</span>
+              <span className="flex items-center gap-1"><span className="w-8 h-0.5 bg-green-700 inline-block" /> 3-yr avg</span>
+            </div>
+            {/* Endpoint toggle */}
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={excludeEndpoints}
+                  onChange={(e) => setExcludeEndpoints(e.target.checked)}
+                />
+                <div className={`w-8 h-4 rounded-full transition-colors duration-200 ${excludeEndpoints ? 'bg-green-600' : 'bg-stone-300'}`} />
+                <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${excludeEndpoints ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              </div>
+              <span className="text-[10px] text-stone-400">Exclude Mission & Bayshore</span>
+            </label>
           </div>
         </div>
 
@@ -105,7 +127,7 @@ export default function CrashTrendChart({ trendData, majorIncidents }: Props) {
           <div style={{ minWidth }}>
             <ResponsiveContainer width="100%" height={240}>
               <ComposedChart
-                data={trendData}
+                data={data}
                 margin={{ top: 8, right: 16, bottom: 4, left: 28 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
@@ -114,7 +136,7 @@ export default function CrashTrendChart({ trendData, majorIncidents }: Props) {
                   tick={{ fontSize: 10, fill: '#78716c' }}
                   tickLine={false}
                   axisLine={false}
-                  interval={trendData.length > 15 ? 2 : 0}
+                  interval={data.length > 15 ? 2 : 0}
                 />
                 <YAxis
                   tick={{ fontSize: 10, fill: '#78716c' }}
@@ -142,7 +164,7 @@ export default function CrashTrendChart({ trendData, majorIncidents }: Props) {
       </div>
 
       {/* Major incidents list */}
-      {majorIncidents.length > 0 && (
+      {incidents.length > 0 && (
         <div className="bg-white border border-stone-200 rounded-xl p-5">
           <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">
             Major Incidents
@@ -151,7 +173,7 @@ export default function CrashTrendChart({ trendData, majorIncidents }: Props) {
             Fatal and severe injury crashes along the corridor
           </p>
           <div className="divide-y divide-stone-100">
-            {majorIncidents.map((incident) => (
+            {incidents.map((incident) => (
               <Link
                 key={incident.datasf_id}
                 href={`/crashes/${incident.datasf_id}`}

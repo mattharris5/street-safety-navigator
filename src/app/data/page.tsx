@@ -1,13 +1,15 @@
 import { getSupabase } from '@/lib/supabase';
 import { getIntersections } from '@/lib/data';
 import CorridorChart from './CorridorChart';
+import CrashTrendChart, { type YearPoint, type MajorIncident } from './CrashTrendChart';
 
 async function getData() {
   const supabase = getSupabase();
-  const [intersections, { data: crashRows }, { data: srRows }] = await Promise.all([
+  const [intersections, { data: crashRows }, { data: srRows }, { data: trendRows }] = await Promise.all([
     getIntersections(),
     supabase.from('crashes').select('intersection_id').not('intersection_id', 'is', null),
     supabase.from('service_requests').select('intersection_id').not('intersection_id', 'is', null),
+    supabase.from('crashes').select('occurred_at, severity, raw, datasf_id').not('occurred_at', 'is', null).order('occurred_at'),
   ]);
 
   // Count per intersection
@@ -20,7 +22,7 @@ async function getData() {
     srCounts[r.intersection_id] = (srCounts[r.intersection_id] ?? 0) + 1;
   }
 
-  // Intersection IDs from DB (slugs map to id via slug)
+  // Intersection IDs from DB
   const { data: intRows } = await supabase
     .from('intersections')
     .select('id,slug')
@@ -41,11 +43,53 @@ async function getData() {
   const totalCrashes = Object.values(crashCounts).reduce((a, b) => a + b, 0);
   const totalRequests = Object.values(srCounts).reduce((a, b) => a + b, 0);
 
-  return { chartData, totalCrashes, totalRequests };
+  // Trend: group by year
+  const yearMap: Record<number, { total: number; fatal: number; severe: number }> = {};
+  for (const r of trendRows ?? []) {
+    const year = new Date(r.occurred_at as string).getFullYear();
+    if (!yearMap[year]) yearMap[year] = { total: 0, fatal: 0, severe: 0 };
+    yearMap[year].total++;
+    if (r.severity === 'Fatal') yearMap[year].fatal++;
+    else if (r.severity === 'Severe Injury') yearMap[year].severe++;
+  }
+
+  const years = Object.keys(yearMap).map(Number).sort();
+  const trendData: YearPoint[] = [];
+  if (years.length > 0) {
+    for (let y = years[0]; y <= years[years.length - 1]; y++) {
+      const d = yearMap[y] ?? { total: 0, fatal: 0, severe: 0 };
+      trendData.push({ year: y, total: d.total, fatal: d.fatal, severe: d.severe, other: d.total - d.fatal - d.severe, avg3yr: 0 });
+    }
+    // 3-year centred rolling average
+    trendData.forEach((d, i) => {
+      const window = trendData.slice(Math.max(0, i - 1), Math.min(trendData.length, i + 2));
+      d.avg3yr = window.reduce((s, w) => s + w.total, 0) / window.length;
+    });
+  }
+
+  // Major incidents: fatal + severe, most recent first
+  const majorIncidents: MajorIncident[] = (trendRows ?? [])
+    .filter((r) => r.severity === 'Fatal' || r.severity === 'Severe Injury')
+    .map((r) => {
+      const raw = (r.raw ?? {}) as Record<string, string>;
+      return {
+        datasf_id: r.datasf_id as string,
+        occurred_at: r.occurred_at as string,
+        severity: r.severity as string,
+        killed: parseInt(raw.number_killed ?? '0', 10),
+        injured: parseInt(raw.number_injured ?? '0', 10),
+        type: raw.type_of_collision ?? null,
+        primaryRd: raw.primary_rd ?? null,
+        crossRd: raw.secondary_rd ?? null,
+      };
+    })
+    .sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime());
+
+  return { chartData, totalCrashes, totalRequests, trendData, majorIncidents };
 }
 
 export default async function DataPage() {
-  const { chartData, totalCrashes, totalRequests } = await getData();
+  const { chartData, totalCrashes, totalRequests, trendData, majorIncidents } = await getData();
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
@@ -67,6 +111,12 @@ export default async function DataPage() {
           </div>
         </div>
       </div>
+
+      {trendData.length > 0 && (
+        <div className="mb-10">
+          <CrashTrendChart trendData={trendData} majorIncidents={majorIncidents} />
+        </div>
+      )}
 
       <CorridorChart data={chartData} />
     </div>
